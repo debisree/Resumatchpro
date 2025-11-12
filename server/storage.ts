@@ -5,9 +5,12 @@ import {
   type InsertResume,
   type Analysis,
   type InsertAnalysis,
+  type JobMatch,
+  type InsertJobMatch,
   users,
   resumes,
-  analyses
+  analyses,
+  jobMatches
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-serverless";
@@ -27,17 +30,23 @@ export interface IStorage {
   getAnalysis(id: string): Promise<Analysis | undefined>;
   getAnalysisByResumeId(resumeId: string): Promise<Analysis | undefined>;
   createAnalysis(analysis: InsertAnalysis): Promise<Analysis>;
+  
+  getJobMatch(id: string): Promise<JobMatch | undefined>;
+  getJobMatchesByResumeId(resumeId: string): Promise<JobMatch[]>;
+  createJobMatch(jobMatch: InsertJobMatch): Promise<JobMatch>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
   private resumes: Map<string, Resume>;
   private analyses: Map<string, Analysis>;
+  private jobMatches: Map<string, JobMatch>;
 
   constructor() {
     this.users = new Map();
     this.resumes = new Map();
     this.analyses = new Map();
+    this.jobMatches = new Map();
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -102,6 +111,27 @@ export class MemStorage implements IStorage {
     this.analyses.set(id, analysis);
     return analysis;
   }
+
+  async getJobMatch(id: string): Promise<JobMatch | undefined> {
+    return this.jobMatches.get(id);
+  }
+
+  async getJobMatchesByResumeId(resumeId: string): Promise<JobMatch[]> {
+    return Array.from(this.jobMatches.values())
+      .filter((match) => match.resumeId === resumeId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async createJobMatch(insertJobMatch: InsertJobMatch): Promise<JobMatch> {
+    const id = randomUUID();
+    const jobMatch: JobMatch = {
+      id,
+      ...insertJobMatch,
+      createdAt: new Date()
+    };
+    this.jobMatches.set(id, jobMatch);
+    return jobMatch;
+  }
 }
 
 export class DbStorage implements IStorage {
@@ -158,6 +188,24 @@ export class DbStorage implements IStorage {
 
   async createAnalysis(insertAnalysis: InsertAnalysis): Promise<Analysis> {
     const result = await this.db.insert(analyses).values(insertAnalysis).returning();
+    return result[0];
+  }
+
+  async getJobMatch(id: string): Promise<JobMatch | undefined> {
+    const result = await this.db.select().from(jobMatches).where(eq(jobMatches.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getJobMatchesByResumeId(resumeId: string): Promise<JobMatch[]> {
+    return await this.db
+      .select()
+      .from(jobMatches)
+      .where(eq(jobMatches.resumeId, resumeId))
+      .orderBy(desc(jobMatches.createdAt));
+  }
+
+  async createJobMatch(insertJobMatch: InsertJobMatch): Promise<JobMatch> {
+    const result = await this.db.insert(jobMatches).values(insertJobMatch).returning();
     return result[0];
   }
 }

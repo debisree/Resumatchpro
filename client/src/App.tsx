@@ -11,6 +11,7 @@ import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
 import Results from "@/pages/results";
 import JobMatch from "@/pages/job-match";
+import JobMatchResults from "@/pages/job-match-results";
 
 function Router() {
   return (
@@ -18,6 +19,7 @@ function Router() {
       <Route path="/" component={Landing} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/job-match" component={JobMatch} />
+      <Route path="/job-matches/:id" component={JobMatchResults} />
       <Route path="/results/:id" component={Results} />
       <Route component={NotFound} />
     </Switch>

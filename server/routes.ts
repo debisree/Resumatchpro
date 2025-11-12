@@ -4,7 +4,7 @@ import session from "express-session";
 import multer from "multer";
 import { storage } from "./storage";
 import { extractText } from "./fileExtractor";
-import { analyzeResume } from "./gemini";
+import { analyzeResume, analyzeJobMatch, generateJobDescription } from "./gemini";
 import { insertUserSchema } from "@shared/schema";
 
 const upload = multer({
@@ -187,6 +187,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(analysis);
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to fetch analysis" });
+    }
+  });
+
+  app.post("/api/job-matches/analyze", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const { jobDescription, jobRole, jobLocation } = req.body;
+
+      const resumes = await storage.getResumesByUserId(req.session.userId);
+      if (!resumes || resumes.length === 0) {
+        return res.status(400).json({ message: "Please upload a resume first" });
+      }
+
+      const resume = resumes[0];
+      let finalJobDescription = jobDescription;
+
+      if (!finalJobDescription && jobRole && jobLocation) {
+        finalJobDescription = await generateJobDescription(jobRole, jobLocation);
+      }
+
+      if (!finalJobDescription) {
+        return res.status(400).json({ message: "Job description is required" });
+      }
+
+      const matchResult = await analyzeJobMatch(resume.extractedText, finalJobDescription);
+
+      const jobMatch = await storage.createJobMatch({
+        resumeId: resume.id,
+        jobDescription: finalJobDescription,
+        jobRole: jobRole || null,
+        jobLocation: jobLocation || null,
+        alignmentScore: matchResult.alignmentScore,
+        alignmentRationale: matchResult.alignmentRationale,
+        gaps: matchResult.gaps,
+        strengths: matchResult.strengths,
+        recommendations: matchResult.recommendations,
+      });
+
+      res.json(jobMatch);
+    } catch (error: any) {
+      console.error("Job match analysis error:", error);
+      res.status(500).json({ message: error.message || "Failed to analyze job match" });
+    }
+  });
+
+  app.get("/api/job-matches/:id", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const jobMatch = await storage.getJobMatch(req.params.id);
+      if (!jobMatch) {
+        return res.status(404).json({ message: "Job match not found" });
+      }
+
+      const resume = await storage.getResume(jobMatch.resumeId);
+      if (!resume || resume.userId !== req.session.userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      res.json(jobMatch);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Failed to fetch job match" });
     }
   });
 

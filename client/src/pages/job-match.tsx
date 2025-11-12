@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
+import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,7 +13,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Target, FileText, MapPin, Briefcase } from "lucide-react";
+import { Target, FileText, MapPin, Briefcase, Loader2 } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import type { JobMatch } from "@shared/schema";
 
 const JOB_ROLES = [
   "Data Scientist",
@@ -44,9 +49,36 @@ const LOCATIONS = [
 ];
 
 export default function JobMatch() {
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const [jobDescription, setJobDescription] = useState("");
   const [selectedRole, setSelectedRole] = useState<string>("");
   const [selectedLocation, setSelectedLocation] = useState<string>("");
+
+  const analyzeMutation = useMutation({
+    mutationFn: async (data: {jobDescription?: string; jobRole?: string; jobLocation?: string}) => {
+      const response = await apiRequest("POST", "/api/job-matches/analyze", data);
+      return await response.json();
+    },
+    onSuccess: (data: JobMatch) => {
+      setLocation(`/job-matches/${data.id}`);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Analysis failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAnalyzeWithText = () => {
+    analyzeMutation.mutate({ jobDescription });
+  };
+
+  const handleAnalyzeWithRole = () => {
+    analyzeMutation.mutate({ jobRole: selectedRole, jobLocation: selectedLocation });
+  };
 
   return (
     <div className="min-h-full bg-background">
@@ -94,11 +126,21 @@ export default function JobMatch() {
                   <Button 
                     className="w-full" 
                     size="lg"
-                    disabled={!jobDescription.trim()}
+                    disabled={!jobDescription.trim() || analyzeMutation.isPending}
+                    onClick={handleAnalyzeWithText}
                     data-testid="button-analyze-match"
                   >
-                    <Target className="w-4 h-4 mr-2" />
-                    Analyze Match
+                    {analyzeMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <Target className="w-4 h-4 mr-2" />
+                        Analyze Match
+                      </>
+                    )}
                   </Button>
                 </div>
               </CardContent>
@@ -153,11 +195,21 @@ export default function JobMatch() {
                   <Button 
                     className="w-full" 
                     size="lg"
-                    disabled={!selectedRole || !selectedLocation}
+                    disabled={!selectedRole || !selectedLocation || analyzeMutation.isPending}
+                    onClick={handleAnalyzeWithRole}
                     data-testid="button-analyze-role-match"
                   >
-                    <Target className="w-4 h-4 mr-2" />
-                    Analyze Match
+                    {analyzeMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <Target className="w-4 h-4 mr-2" />
+                        Analyze Match
+                      </>
+                    )}
                   </Button>
                 </div>
               </CardContent>
