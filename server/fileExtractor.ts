@@ -1,21 +1,25 @@
 import mammoth from "mammoth";
 import Tesseract from "tesseract.js";
-
-let pdfParse: any = null;
-
-async function getPdfParse() {
-  if (!pdfParse) {
-    const module = await import("pdf-parse");
-    pdfParse = module.default;
-  }
-  return pdfParse;
-}
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 
 export async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
-    const parse = await getPdfParse();
-    const data = await parse(buffer);
-    const text = data.text?.trim() || "";
+    const uint8Array = new Uint8Array(buffer);
+    const loadingTask = pdfjsLib.getDocument({ data: uint8Array });
+    const pdf = await loadingTask.promise;
+    
+    let fullText = "";
+    
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items
+        .map((item: any) => item.str)
+        .join(" ");
+      fullText += pageText + "\n";
+    }
+    
+    const text = fullText.trim();
     if (!text) {
       throw new Error("PDF appears to be empty or contains no extractable text");
     }
