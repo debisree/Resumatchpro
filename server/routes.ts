@@ -329,7 +329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { generateTailoredResume } = await import("./gemini.js");
-      const tailoredResume = await generateTailoredResume(
+      const { changesSummary, resumeMarkdown } = await generateTailoredResume(
         resume.extractedText,
         jobMatch.jobDescription,
         jobMatch.strengths,
@@ -337,7 +337,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         jobMatch.gapResponses
       );
 
-      const updated = await storage.updateJobMatchResume(req.params.id, tailoredResume);
+      const updated = await storage.updateJobMatchResume(req.params.id, changesSummary, resumeMarkdown);
 
       res.json(updated);
     } catch (error: any) {

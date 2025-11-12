@@ -322,7 +322,7 @@ export async function generateTailoredResume(
   strengths: string[],
   gaps: Array<{ category: string; description: string }>,
   gapResponses: Array<{ gapIndex: number; proficiencyLevel: string }>
-): Promise<string> {
+): Promise<{ changesSummary: string; resumeMarkdown: string }> {
   const skillsToAdd = gapResponses
     .filter(response => 
       response.proficiencyLevel !== 'none' && 
@@ -438,5 +438,24 @@ Respond with BOTH sections separated by ===SEPARATOR===`;
     contents: prompt,
   });
 
-  return response.text || "";
+  const fullResponse = response.text || "";
+  
+  const separator = "===SEPARATOR===";
+  const separatorIndex = fullResponse.indexOf(separator);
+  
+  if (separatorIndex === -1) {
+    console.warn("Gemini response missing separator - using fallback");
+    return {
+      changesSummary: "Unable to generate changes summary",
+      resumeMarkdown: fullResponse,
+    };
+  }
+  
+  const changesSummary = fullResponse.substring(0, separatorIndex).trim();
+  const resumeMarkdown = fullResponse.substring(separatorIndex + separator.length).trim();
+  
+  return {
+    changesSummary,
+    resumeMarkdown,
+  };
 }

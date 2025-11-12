@@ -40,7 +40,7 @@ export interface IStorage {
     finalVerdict: string,
     shouldApply: boolean
   ): Promise<JobMatch | undefined>;
-  updateJobMatchResume(id: string, tailoredResumeContent: string): Promise<JobMatch | undefined>;
+  updateJobMatchResume(id: string, changesSummary: string, tailoredResumeContent: string): Promise<JobMatch | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -159,12 +159,13 @@ export class MemStorage implements IStorage {
     return updated;
   }
 
-  async updateJobMatchResume(id: string, tailoredResumeContent: string): Promise<JobMatch | undefined> {
+  async updateJobMatchResume(id: string, changesSummary: string, tailoredResumeContent: string): Promise<JobMatch | undefined> {
     const jobMatch = this.jobMatches.get(id);
     if (!jobMatch) return undefined;
 
     const updated: JobMatch = {
       ...jobMatch,
+      changesSummary,
       tailoredResumeContent,
     };
     this.jobMatches.set(id, updated);
@@ -265,10 +266,10 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
-  async updateJobMatchResume(id: string, tailoredResumeContent: string): Promise<JobMatch | undefined> {
+  async updateJobMatchResume(id: string, changesSummary: string, tailoredResumeContent: string): Promise<JobMatch | undefined> {
     const result = await this.db
       .update(jobMatches)
-      .set({ tailoredResumeContent })
+      .set({ changesSummary, tailoredResumeContent })
       .where(eq(jobMatches.id, id))
       .returning();
     return result[0];
