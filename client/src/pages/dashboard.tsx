@@ -62,7 +62,8 @@ export default function Dashboard() {
 
   const analyzeMutation = useMutation({
     mutationFn: async (resumeId: string) => {
-      return await apiRequest("POST", `/api/resumes/${resumeId}/analyze`, {});
+      const response = await apiRequest("POST", `/api/resumes/${resumeId}/analyze`, {});
+      return await response.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/resumes"] });
@@ -85,12 +86,13 @@ export default function Dashboard() {
       "image/png",
       "image/jpeg",
       "image/jpg",
+      "text/plain",
     ];
 
     if (!allowedTypes.includes(file.type)) {
       toast({
         title: "Invalid file type",
-        description: "Please upload a PDF, DOCX, PNG, or JPG file.",
+        description: "Please upload a PDF, DOCX, PNG, JPG, or TXT file.",
         variant: "destructive",
       });
       return;
@@ -189,7 +191,7 @@ export default function Dashboard() {
                     </p>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Supports PDF, DOCX, PNG, JPG (max 10MB)
+                    Supports PDF, DOCX, PNG, JPG, TXT (max 10MB)
                   </p>
                 </>
               )}
@@ -198,7 +200,7 @@ export default function Dashboard() {
               ref={fileInputRef}
               type="file"
               className="sr-only"
-              accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+              accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.txt"
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file) handleFileSelect(file);

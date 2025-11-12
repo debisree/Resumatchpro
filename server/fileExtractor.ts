@@ -5,7 +5,8 @@ let pdfParse: any = null;
 
 async function getPdfParse() {
   if (!pdfParse) {
-    pdfParse = (await import("pdf-parse")).default;
+    const module = await import("pdf-parse");
+    pdfParse = module.default;
   }
   return pdfParse;
 }
@@ -74,6 +75,8 @@ export async function extractText(buffer: Buffer, mimeType: string): Promise<str
     return extractTextFromDOCX(buffer);
   } else if (mimeType.startsWith("image/")) {
     return extractTextFromImage(buffer);
+  } else if (mimeType === "text/plain") {
+    return buffer.toString("utf-8");
   } else {
     throw new Error("Unsupported file type");
   }

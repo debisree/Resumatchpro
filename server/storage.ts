@@ -4,9 +4,16 @@ import {
   type Resume, 
   type InsertResume,
   type Analysis,
-  type InsertAnalysis
+  type InsertAnalysis,
+  users,
+  resumes,
+  analyses
 } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { drizzle } from "drizzle-orm/neon-serverless";
+import { eq, desc } from "drizzle-orm";
+import { Pool, neonConfig } from "@neondatabase/serverless";
+import ws from "ws";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -84,8 +91,12 @@ export class MemStorage implements IStorage {
   async createAnalysis(insertAnalysis: InsertAnalysis): Promise<Analysis> {
     const id = randomUUID();
     const analysis: Analysis = { 
-      ...insertAnalysis, 
       id,
+      resumeId: insertAnalysis.resumeId,
+      completenessScore: insertAnalysis.completenessScore,
+      completenessRationale: insertAnalysis.completenessRationale,
+      sectionScores: insertAnalysis.sectionScores,
+      suggestions: insertAnalysis.suggestions,
       createdAt: new Date()
     };
     this.analyses.set(id, analysis);
@@ -93,4 +104,63 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DbStorage implements IStorage {
+  private db;
+
+  constructor(connectionString: string) {
+    neonConfig.webSocketConstructor = ws;
+    const pool = new Pool({ connectionString });
+    this.db = drizzle(pool);
+  }
+
+  async getUser(id: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.username, username)).limit(1);
+    return result[0];
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const result = await this.db.insert(users).values(insertUser).returning();
+    return result[0];
+  }
+
+  async getResume(id: string): Promise<Resume | undefined> {
+    const result = await this.db.select().from(resumes).where(eq(resumes.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getResumesByUserId(userId: string): Promise<Resume[]> {
+    return await this.db
+      .select()
+      .from(resumes)
+      .where(eq(resumes.userId, userId))
+      .orderBy(desc(resumes.createdAt));
+  }
+
+  async createResume(insertResume: InsertResume): Promise<Resume> {
+    const result = await this.db.insert(resumes).values(insertResume).returning();
+    return result[0];
+  }
+
+  async getAnalysis(id: string): Promise<Analysis | undefined> {
+    const result = await this.db.select().from(analyses).where(eq(analyses.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getAnalysisByResumeId(resumeId: string): Promise<Analysis | undefined> {
+    const result = await this.db.select().from(analyses).where(eq(analyses.resumeId, resumeId)).limit(1);
+    return result[0];
+  }
+
+  async createAnalysis(insertAnalysis: InsertAnalysis): Promise<Analysis> {
+    const result = await this.db.insert(analyses).values(insertAnalysis).returning();
+    return result[0];
+  }
+}
+
+const dbUrl = process.env.DATABASE_URL;
+export const storage = dbUrl ? new DbStorage(dbUrl) : new MemStorage();
