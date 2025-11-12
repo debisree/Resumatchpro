@@ -71,6 +71,7 @@ export const jobMatches = pgTable("job_matches", {
   }>>(),
   finalVerdict: text("final_verdict"),
   shouldApply: boolean("should_apply"),
+  changesSummary: text("changes_summary"),
   tailoredResumeContent: text("tailored_resume_content"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
