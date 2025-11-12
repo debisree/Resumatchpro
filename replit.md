@@ -71,13 +71,19 @@ Preferred communication style: Simple, everyday language.
 5. Gemini processes text and returns structured analysis
 6. Results stored and returned to client
 
-**Job Matching Data Flow**:
-1. User provides either custom job description OR selects role + location from curated lists
+**Job Matching Data Flow** (Interactive Two-Step Process):
+1. **Initial Analysis**: User provides either custom job description OR selects role + location from curated lists
 2. If role+location selected, Gemini generates a tailored job description
 3. User's most recent resume text is retrieved
 4. Gemini analyzes resume against job requirements using semantic matching
-5. AI returns alignment score (0-100%), strengths, categorized gaps (with severity levels), and recommendations
-6. Results stored in database and displayed to user
+5. AI returns alignment score (0-100%), strengths, categorized gaps (with severity levels)
+6. Initial results stored in database
+7. **Interactive Gap Assessment**: User provides proficiency level (None/Basic/Moderate/Advanced) for each identified gap
+8. Gemini generates final verdict based on gap responses, providing positive apply/don't apply recommendation
+9. Final verdict stored in database
+10. **Tailored Resume Generation** (Optional): User can request AI-generated tailored resume optimized for ATS
+11. Gemini creates resume based on original content + gap feedback (no hallucinations)
+12. Resume content stored in database and downloaded as DOCX file via client-side generation
 
 ### Data Storage
 
@@ -115,7 +121,7 @@ Preferred communication style: Simple, everyday language.
 
 **JobMatches Table**:
 - id (UUID primary key)
-- userId (foreign key to users)
+- resumeId (foreign key to resumes)
 - jobDescription (text) - stores custom JD or AI-generated JD from role+location
 - jobRole (text, nullable) - selected role if using curated mode
 - jobLocation (text, nullable) - selected location if using curated mode
@@ -123,7 +129,10 @@ Preferred communication style: Simple, everyday language.
 - alignmentRationale (text) - AI explanation of score
 - strengths (JSONB array of strings) - resume strengths for this job
 - gaps (JSONB array of objects with category, description, severity fields) - missing qualifications
-- recommendations (JSONB array of strings) - actionable improvement suggestions
+- gapResponses (JSONB array, nullable) - user's proficiency responses for each gap
+- finalVerdict (text, nullable) - AI-generated recommendation on whether to apply
+- shouldApply (boolean, nullable) - AI's positive apply/don't apply decision
+- tailoredResumeContent (text, nullable) - AI-generated tailored resume content
 - createdAt (timestamp)
 
 **Storage Interface**: IStorage interface defines contract for data operations, allowing easy migration from in-memory to PostgreSQL using Drizzle ORM
@@ -163,3 +172,9 @@ Preferred communication style: Simple, everyday language.
 - Tailwind CSS for utility-first styling
 - Lucide React for icons
 - React Hook Form with Zod validation (@hookform/resolvers)
+
+**Document Generation**:
+- docx library for client-side DOCX resume generation (~100KB bundle)
+- file-saver for triggering browser downloads
+- Parses markdown-formatted resume content into structured DOCX with headings, bullets, and formatting
+- ATS-friendly output with consistent styling

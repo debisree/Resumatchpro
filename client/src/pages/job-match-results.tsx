@@ -17,6 +17,8 @@ import { ArrowLeft, CheckCircle2, AlertCircle, Send, FileDown, Loader2 } from "l
 import type { JobMatch } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from "docx";
+import { saveAs } from "file-saver";
 
 const SEVERITY_STYLES = {
   high: { variant: "destructive" as const, label: "Critical" },
@@ -99,18 +101,74 @@ export default function JobMatchResults() {
     submitResponsesMutation.mutate(responses);
   };
 
-  const handleDownloadResume = () => {
+  const handleDownloadResume = async () => {
     if (!jobMatch?.tailoredResumeContent) return;
+
+    const content = jobMatch.tailoredResumeContent;
+    const lines = content.split('\n').filter(line => line.trim());
     
-    const blob = new Blob([jobMatch.tailoredResumeContent], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `tailored-resume-${jobMatch.jobRole || "job"}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const children: Paragraph[] = [];
+    
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      
+      if (trimmedLine.startsWith('# ')) {
+        children.push(
+          new Paragraph({
+            text: trimmedLine.substring(2),
+            heading: HeadingLevel.HEADING_1,
+            spacing: { before: 200, after: 100 },
+          })
+        );
+      } else if (trimmedLine.startsWith('## ')) {
+        children.push(
+          new Paragraph({
+            text: trimmedLine.substring(3),
+            heading: HeadingLevel.HEADING_2,
+            spacing: { before: 150, after: 80 },
+          })
+        );
+      } else if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('• ')) {
+        children.push(
+          new Paragraph({
+            text: trimmedLine.substring(2),
+            bullet: { level: 0 },
+            spacing: { after: 40 },
+          })
+        );
+      } else if (trimmedLine.startsWith('**') && trimmedLine.endsWith('**')) {
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: trimmedLine.substring(2, trimmedLine.length - 2),
+                bold: true,
+              }),
+            ],
+            spacing: { after: 60 },
+          })
+        );
+      } else if (trimmedLine) {
+        children.push(
+          new Paragraph({
+            text: trimmedLine,
+            spacing: { after: 60 },
+          })
+        );
+      }
+    }
+
+    const doc = new Document({
+      sections: [
+        {
+          properties: {},
+          children,
+        },
+      ],
+    });
+
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, `tailored-resume-${jobMatch.jobRole || "job"}.docx`);
   };
 
   if (isLoading) {
