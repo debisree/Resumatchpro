@@ -323,56 +323,144 @@ export async function generateTailoredResume(
   gaps: Array<{ category: string; description: string }>,
   gapResponses: Array<{ gapIndex: number; proficiencyLevel: string }>
 ): Promise<string> {
-  const userProficiencies = gapResponses.map((response, idx) => {
+  const userProficiencies = gapResponses.map((response) => {
     const gap = gaps[response.gapIndex];
-    return `${gap?.category}: ${response.proficiencyLevel}`;
-  }).join("\n");
+    if (!gap) return null;
+    return `- ${gap.category} (${gap.description}): User has ${response.proficiencyLevel} proficiency`;
+  }).filter(Boolean).join("\n");
 
-  const prompt = `You are an expert resume writer specializing in ATS-friendly resumes. Create a perfectly formatted, tailored resume based on the original content.
+  const prompt = `You are an expert resume writer specializing in ATS-friendly resumes. Create a tailored resume that PRESERVES ALL original sections while optimizing for the target job.
 
 ORIGINAL RESUME:
 ${originalResumeText}
 
-JOB DESCRIPTION:
+TARGET JOB DESCRIPTION:
 ${jobDescription.substring(0, 2000)}
 
-IDENTIFIED STRENGTHS (highlight these):
-${strengths.join("\n")}
+IDENTIFIED STRENGTHS TO HIGHLIGHT:
+${strengths.join("\n- ")}
 
 USER'S PROFICIENCY IN GAP AREAS:
 ${userProficiencies}
 
-CRITICAL RULES:
-1. DO NOT hallucinate or exaggerate - use ONLY information from the original resume
-2. DO NOT add fake skills, experiences, or qualifications
-3. Reorder and reword content to emphasize relevant experience for this specific job
-4. Use keywords from the job description naturally throughout (ATS optimization)
-5. Keep the same factual information but present it more effectively
-6. If user has basic/moderate proficiency in a gap area mentioned, you MAY add it to skills section if it's truthful
-7. Format should be clean, professional, and ATS-friendly (no tables, columns, or special formatting)
-8. Include all sections: Contact Info, Professional Summary, Experience, Education, Skills
+CRITICAL RULES - READ CAREFULLY:
 
-STRUCTURE:
-[FULL NAME]
-[Contact Information]
+1. **PRESERVE EVERYTHING**: NEVER remove ANY section from the original resume
+   - Keep ALL contact information, links (LinkedIn, email, phone, website, GitHub, etc.)
+   - Keep Volunteering, Awards, Certifications, Publications, Projects, Languages - EVERYTHING
+   - If a section exists in the original, it MUST exist in the tailored version
 
-PROFESSIONAL SUMMARY
-[2-3 sentences tailored to this role]
+2. **NO HALLUCINATION**: Use ONLY real information from the original resume
+   - DO NOT invent skills, experiences, or qualifications
+   - DO NOT exaggerate dates, titles, or achievements
+   - You can only rephrase existing content more effectively
 
-PROFESSIONAL EXPERIENCE
-[Most Recent Job]
-[Job Title] | [Company] | [Dates]
-• [Achievement/responsibility relevant to target role]
-• [Achievement/responsibility relevant to target role]
-[Continue for all positions...]
+3. **SECTION ORDER** (mandatory):
+   - Header: Full Name + ALL Contact Info (email, phone, LinkedIn, GitHub, portfolio, etc.)
+   - Professional Summary (2-3 sentences optimized for target role)
+   - **Skills** (RIGHT AFTER SUMMARY - organize by category, highlight job-relevant skills first)
+   - Professional Experience (reorder bullet points to emphasize relevant work)
+   - Education
+   - Certifications (if present in original)
+   - Volunteering (if present in original)
+   - Awards (if present in original)
+   - Any other sections from the original resume
 
-EDUCATION
-[Degree] | [Institution] | [Year]
+4. **GAP PROFICIENCY INTEGRATION**:
+   - For skills where user has "basic", "moderate", or "advanced" proficiency:
+     * If that skill IS mentioned anywhere in their original resume, emphasize it in Skills section
+     * If that skill is NOT in original resume, DO NOT add it (no hallucination)
+   - For skills where user has "none" proficiency: don't emphasize those in tailored version
 
-SKILLS
-[Categorized skills relevant to the job]
+5. **CHANGES TO MAKE** - Start with a summary section:
+   # CHANGES MADE IN THIS TAILORED VERSION
+   
+   ## Modifications:
+   - [List 4-6 specific changes you made, e.g., "Moved Skills section after Summary", "Emphasized JavaScript experience in Project X bullet point", "Reordered achievements to highlight leadership"]
+   
+   ## Skills Emphasized:
+   - [List 3-5 skills from original resume that match job requirements]
+   
+   ## Structure Preserved:
+   - All original sections maintained
+   - All contact links preserved
+   - No information removed
+   
+   ---
+   
+   [Then the actual tailored resume follows]
 
-Respond with ONLY the formatted resume text, no JSON, no explanations, no preamble.`;
+6. **ATS OPTIMIZATION**:
+   - Use keywords from job description naturally in bullet points
+   - Ensure Skills section is scannable and categorized
+   - Use standard section headers
+   - No tables, columns, or special formatting
+
+7. **FORMATTING** (use markdown):
+   - # for name
+   - ## for section headers
+   - - for bullet points
+   - **bold** for job titles, companies, degrees
+   - Plain text for contact info
+
+EXAMPLE STRUCTURE:
+
+# CHANGES MADE IN THIS TAILORED VERSION
+
+## Modifications:
+- Repositioned Skills section directly after Professional Summary for better ATS visibility
+- Emphasized React and JavaScript experience in TechCorp position
+- Highlighted leadership achievements in team management bullets
+- Reordered skills to prioritize job-relevant technologies
+
+## Skills Emphasized:
+- React, Node.js, TypeScript (match job requirements)
+- Project management and team leadership
+- Agile/Scrum methodologies
+
+## Structure Preserved:
+- All original contact information and links maintained
+- Volunteering section retained with community contributions
+- Awards section preserved with recognitions
+- No content removed, only reorganized for impact
+
+---
+
+# [FULL NAME]
+[Email] | [Phone] | [LinkedIn URL] | [GitHub URL] | [Portfolio URL] | [Any other links]
+
+## Professional Summary
+[2-3 sentences optimized for target role, using keywords from job description]
+
+## Skills
+**[Category 1]:** [Skills relevant to job listed first]
+**[Category 2]:** [Additional relevant skills]
+
+## Professional Experience
+
+**[Job Title]** | **[Company]** | [Dates]
+- [Bullet emphasizing relevant achievement/responsibility]
+- [Another relevant bullet with keywords]
+- [Continue all bullets, reordered for relevance]
+
+[Continue for all positions from original...]
+
+## Education
+**[Degree]** | [Institution] | [Year]
+[Any relevant coursework, honors - if in original]
+
+## Certifications
+[List all certifications from original resume]
+
+## Volunteering
+[Preserve all volunteering experience from original]
+
+## Awards
+[Preserve all awards from original]
+
+[Any other sections from original...]
+
+Respond with the complete tailored resume including the CHANGES section at the top. No JSON wrapper, just the formatted markdown text.`;
 
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash",
