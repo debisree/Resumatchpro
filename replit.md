@@ -64,9 +64,15 @@ Preferred communication style: Simple, everyday language.
 
 ### Data Storage
 
-**Current Implementation**: In-memory storage using Map data structures (MemStorage class)
+**Current Implementation**: PostgreSQL database via Neon serverless with Drizzle ORM
 
-**Database Schema** (Drizzle ORM definitions for future PostgreSQL migration):
+**Migration History**: 
+- November 12, 2025: Migrated from in-memory (MemStorage) to PostgreSQL persistence
+- All data (users, resumes, analyses) now persisted in Neon database
+- DbStorage class implements IStorage interface with full Drizzle ORM CRUD operations
+- Fallback to MemStorage available when DATABASE_URL not present
+
+**Database Schema**:
 
 **Users Table**:
 - id (UUID primary key)
@@ -99,16 +105,18 @@ Preferred communication style: Simple, everyday language.
 - Environment variables: `AI_INTEGRATIONS_GEMINI_API_KEY` and `AI_INTEGRATIONS_GEMINI_BASE_URL`
 - Structured output with defined schema for consistent analysis format
 
-**Database** (configured but not actively used):
-- PostgreSQL via Neon serverless (@neondatabase/serverless)
-- Drizzle ORM for type-safe database operations
+**Database** (Active):
+- PostgreSQL via Neon serverless (@neondatabase/serverless) with WebSocket support (ws library)
+- Drizzle ORM for type-safe database operations with full CRUD implementation
 - Connection string via `DATABASE_URL` environment variable
-- Migration files in `/migrations` directory
+- Schema pushed to database via `npm run db:push`
+- DbStorage class handles all persistence with automatic ID/timestamp generation
 
 **File Processing Libraries**:
-- pdf-parse: PDF text extraction
+- pdf-parse: PDF text extraction (uses module.default export)
 - mammoth: DOCX text extraction
 - tesseract.js: OCR for image-based resumes
+- Supported formats: PDF, DOCX, PNG, JPG, TXT (plain text)
 
 **Development Tools**:
 - Replit-specific plugins for development banner, error overlay, and cartographer
