@@ -82,7 +82,13 @@ Preferred communication style: Simple, everyday language.
 8. Gemini generates final verdict based on gap responses, providing positive apply/don't apply recommendation
 9. Final verdict stored in database
 10. **Tailored Resume Generation** (Optional): User can request AI-generated tailored resume optimized for ATS
-11. Gemini creates resume based on original content + gap feedback (no hallucinations)
+11. Gemini creates resume with:
+    - "CHANGES MADE" section showing what was modified
+    - Skills section placed RIGHT AFTER Professional Summary
+    - ALL original sections preserved (Volunteering, Awards, Certifications, etc.)
+    - All contact links maintained (email, phone, LinkedIn, GitHub, portfolio)
+    - Gap proficiency responses integrated (emphasizes skills where user has Basic/Moderate/Advanced proficiency)
+    - No hallucinations - only uses real information from original resume
 12. Resume content stored in database and downloaded as DOCX file via client-side generation
 
 ### Data Storage
