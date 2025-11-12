@@ -23,9 +23,11 @@ export default function Dashboard() {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadingFile, setUploadingFile] = useState<File | null>(null);
 
-  const { data: resumes, isLoading } = useQuery<Resume[]>({
+  const { data: allResumes, isLoading } = useQuery<Resume[]>({
     queryKey: ["/api/resumes"],
   });
+
+  const resumes = allResumes ? [allResumes[0]] : [];
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -128,15 +130,8 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <nav className="h-16 border-b flex items-center px-6 lg:px-12">
-        <div className="flex items-center gap-2">
-          <FileText className="w-6 h-6 text-primary" />
-          <span className="text-lg font-semibold">ResuMatch Pro</span>
-        </div>
-      </nav>
-
-      <main className="max-w-6xl mx-auto p-6 lg:p-12 space-y-8">
+    <div className="min-h-full bg-background">
+      <div className="max-w-6xl mx-auto p-6 lg:p-12 space-y-8">
         <div>
           <h1 className="text-2xl font-semibold mb-2">Dashboard</h1>
           <p className="text-muted-foreground">
@@ -287,7 +282,7 @@ export default function Dashboard() {
             </Card>
           )}
         </div>
-      </main>
+      </div>
     </div>
   );
 }

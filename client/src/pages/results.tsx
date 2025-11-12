@@ -100,9 +100,9 @@ export default function Results() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <nav className="h-16 border-b flex items-center px-6 lg:px-12 sticky top-0 bg-background z-50">
-        <div className="flex items-center gap-4 flex-1">
+    <div className="min-h-full bg-background">
+      <div className="max-w-7xl mx-auto p-6 lg:p-12 pb-2">
+        <div className="flex items-center gap-4 mb-6">
           <Button
             variant="ghost"
             size="icon"
@@ -117,9 +117,9 @@ export default function Results() {
             </h1>
           </div>
         </div>
-      </nav>
+      </div>
 
-      <main className="max-w-7xl mx-auto p-6 lg:p-12">
+      <div className="max-w-7xl mx-auto px-6 lg:px-12 pb-12">
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="grid w-full max-w-md mx-auto grid-cols-3 mb-8" data-testid="tabs-list">
             <TabsTrigger value="overview" data-testid="tab-overview">
@@ -270,7 +270,7 @@ export default function Results() {
             </Card>
           </TabsContent>
         </Tabs>
-      </main>
+      </div>
     </div>
   );
 }

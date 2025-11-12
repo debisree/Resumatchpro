@@ -50,3 +50,28 @@ export const insertAnalysisSchema = createInsertSchema(analyses).omit({
 });
 export type InsertAnalysis = z.infer<typeof insertAnalysisSchema>;
 export type Analysis = typeof analyses.$inferSelect;
+
+export const jobMatches = pgTable("job_matches", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  resumeId: varchar("resume_id").notNull().references(() => resumes.id),
+  jobDescription: text("job_description").notNull(),
+  jobRole: text("job_role"),
+  jobLocation: text("job_location"),
+  alignmentScore: integer("alignment_score").notNull(),
+  alignmentRationale: text("alignment_rationale").notNull(),
+  gaps: jsonb("gaps").notNull().$type<Array<{
+    category: string;
+    description: string;
+    severity: "high" | "medium" | "low";
+  }>>(),
+  strengths: jsonb("strengths").notNull().$type<string[]>(),
+  recommendations: jsonb("recommendations").notNull().$type<string[]>(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertJobMatchSchema = createInsertSchema(jobMatches).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertJobMatch = z.infer<typeof insertJobMatchSchema>;
+export type JobMatch = typeof jobMatches.$inferSelect;
