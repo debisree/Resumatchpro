@@ -4,8 +4,20 @@ import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 
 export async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
+    if (buffer.length < 100) {
+      throw new Error("File is too small to be a valid PDF");
+    }
+
+    const header = buffer.slice(0, 5).toString('utf-8');
+    if (!header.startsWith('%PDF-')) {
+      throw new Error("File is not a valid PDF format. Please upload a real PDF file, not a text file with a .pdf extension.");
+    }
+
     const uint8Array = new Uint8Array(buffer);
-    const loadingTask = pdfjsLib.getDocument({ data: uint8Array });
+    const loadingTask = pdfjsLib.getDocument({ 
+      data: uint8Array,
+      verbosity: 0
+    });
     const pdf = await loadingTask.promise;
     
     let fullText = "";
@@ -21,14 +33,29 @@ export async function extractTextFromPDF(buffer: Buffer): Promise<string> {
     
     const text = fullText.trim();
     if (!text) {
-      throw new Error("PDF appears to be empty or contains no extractable text");
+      throw new Error("PDF appears to be empty or contains no extractable text. If your resume is image-based, try uploading it as PNG or JPG instead.");
     }
     return text;
   } catch (error: any) {
     console.error("PDF extraction error:", error);
+    
+    if (error.message?.includes("not a valid PDF format")) {
+      throw error;
+    }
     if (error.message?.includes("no extractable text")) {
       throw error;
     }
+    if (error.message?.includes("too small")) {
+      throw error;
+    }
+    
+    if (error.message?.toLowerCase().includes("invalid") || 
+        error.message?.toLowerCase().includes("corrupt") ||
+        error.message?.toLowerCase().includes("password") ||
+        error.message?.toLowerCase().includes("encrypted")) {
+      throw new Error("Unable to read PDF file. The file may be corrupted, password-protected, or in an unsupported format. Please try: (1) saving a new copy of your PDF, or (2) uploading as an image (PNG/JPG).");
+    }
+    
     throw new Error(`Failed to extract text from PDF: ${error.message || "Unknown error"}`);
   }
 }
