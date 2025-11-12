@@ -17,7 +17,7 @@ import { ArrowLeft, CheckCircle2, AlertCircle, Send, FileDown, Loader2 } from "l
 import type { JobMatch } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from "docx";
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, ExternalHyperlink } from "docx";
 import { saveAs } from "file-saver";
 
 const SEVERITY_STYLES = {
@@ -101,6 +101,39 @@ export default function JobMatchResults() {
     submitResponsesMutation.mutate(responses);
   };
 
+  const parseMarkdownLine = (text: string): (TextRun | ExternalHyperlink)[] => {
+    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    const parts: (TextRun | ExternalHyperlink)[] = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = linkRegex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(new TextRun(text.substring(lastIndex, match.index)));
+      }
+      
+      parts.push(
+        new ExternalHyperlink({
+          children: [
+            new TextRun({
+              text: match[1],
+              style: "Hyperlink",
+            }),
+          ],
+          link: match[2],
+        })
+      );
+      
+      lastIndex = match.index + match[0].length;
+    }
+
+    if (lastIndex < text.length) {
+      parts.push(new TextRun(text.substring(lastIndex)));
+    }
+
+    return parts.length > 0 ? parts : [new TextRun(text)];
+  };
+
   const handleDownloadResume = async () => {
     if (!jobMatch?.tailoredResumeContent) return;
 
@@ -113,45 +146,50 @@ export default function JobMatchResults() {
       const trimmedLine = line.trim();
       
       if (trimmedLine.startsWith('# ')) {
+        const text = trimmedLine.substring(2);
         children.push(
           new Paragraph({
-            text: trimmedLine.substring(2),
+            children: parseMarkdownLine(text),
             heading: HeadingLevel.HEADING_1,
             spacing: { before: 200, after: 100 },
           })
         );
       } else if (trimmedLine.startsWith('## ')) {
+        const text = trimmedLine.substring(3);
         children.push(
           new Paragraph({
-            text: trimmedLine.substring(3),
+            children: parseMarkdownLine(text),
             heading: HeadingLevel.HEADING_2,
             spacing: { before: 150, after: 80 },
           })
         );
       } else if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('• ')) {
+        const text = trimmedLine.substring(2);
         children.push(
           new Paragraph({
-            text: trimmedLine.substring(2),
+            children: parseMarkdownLine(text),
             bullet: { level: 0 },
             spacing: { after: 40 },
           })
         );
       } else if (trimmedLine.startsWith('**') && trimmedLine.endsWith('**')) {
+        const text = trimmedLine.substring(2, trimmedLine.length - 2);
+        const parsedParts = parseMarkdownLine(text);
         children.push(
           new Paragraph({
-            children: [
-              new TextRun({
-                text: trimmedLine.substring(2, trimmedLine.length - 2),
-                bold: true,
-              }),
-            ],
+            children: parsedParts.map(part => {
+              if (part instanceof TextRun) {
+                return new TextRun({ text: part.text || '', bold: true });
+              }
+              return part;
+            }),
             spacing: { after: 60 },
           })
         );
       } else if (trimmedLine) {
         children.push(
           new Paragraph({
-            text: trimmedLine,
+            children: parseMarkdownLine(trimmedLine),
             spacing: { after: 60 },
           })
         );
@@ -390,6 +428,24 @@ export default function JobMatchResults() {
                   </Button>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        )}
+
+        {hasGeneratedResume && jobMatch.changesSummary && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl font-semibold">Changes Made to Your Resume</CardTitle>
+              <CardDescription>
+                Review the modifications and improvements applied to tailor your resume for this position
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="prose dark:prose-invert max-w-none">
+                <pre className="whitespace-pre-wrap text-sm leading-relaxed">
+                  {jobMatch.changesSummary}
+                </pre>
+              </div>
             </CardContent>
           </Card>
         )}
