@@ -236,3 +236,148 @@ Respond with just the job description text, no JSON or extra formatting.`;
 
   return response.text || "";
 }
+
+interface FinalVerdictResult {
+  verdict: string;
+  shouldApply: boolean;
+}
+
+export async function generateFinalVerdict(
+  resumeText: string,
+  jobDescription: string,
+  alignmentScore: number,
+  gaps: Array<{ category: string; description: string; severity: string }>,
+  gapResponses: Array<{ gapIndex: number; proficiencyLevel: string }>
+): Promise<FinalVerdictResult> {
+  const gapDetails = gaps.map((gap, index) => {
+    const response = gapResponses.find(r => r.gapIndex === index);
+    return `${gap.category} - ${gap.description} (Severity: ${gap.severity}, User's proficiency: ${response?.proficiencyLevel || "not provided"})`;
+  }).join("\n");
+
+  const prompt = `You are an expert career coach. Based on the resume analysis and user's proficiency responses, provide a final recommendation.
+
+RESUME ALIGNMENT SCORE: ${alignmentScore}%
+
+GAPS AND USER'S PROFICIENCY:
+${gapDetails}
+
+RESUME:
+${resumeText.substring(0, 2000)}
+
+JOB DESCRIPTION:
+${jobDescription.substring(0, 2000)}
+
+Based on:
+1. The alignment score (${alignmentScore}%)
+2. The identified gaps and the user's actual proficiency levels
+3. Overall fit between resume and job requirements
+
+Provide:
+1. A comprehensive final verdict (2-3 paragraphs) that:
+   - Acknowledges the user's strengths
+   - Discusses how their proficiency in gap areas affects their candidacy
+   - Provides an honest but encouraging assessment
+   - Remember: we believe in positivity and taking chances!
+
+2. A boolean recommendation on whether they should apply:
+   - true if alignment score >= 50% OR if user has at least basic proficiency in critical gaps
+   - false only if alignment is very low (<30%) AND user lacks proficiency in most critical gaps
+   - When in doubt, recommend true (we believe in taking chances!)
+
+Respond with structured JSON only.`;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          verdict: {
+            type: Type.STRING,
+            description: "2-3 paragraph final verdict and recommendation"
+          },
+          shouldApply: {
+            type: Type.BOOLEAN,
+            description: "Whether the user should apply for this position"
+          }
+        },
+        required: ["verdict", "shouldApply"]
+      }
+    }
+  });
+
+  const verdictData = JSON.parse(response.text || "{}");
+
+  return {
+    verdict: verdictData.verdict || "Unable to generate verdict at this time.",
+    shouldApply: verdictData.shouldApply !== false,
+  };
+}
+
+export async function generateTailoredResume(
+  originalResumeText: string,
+  jobDescription: string,
+  strengths: string[],
+  gaps: Array<{ category: string; description: string }>,
+  gapResponses: Array<{ gapIndex: number; proficiencyLevel: string }>
+): Promise<string> {
+  const userProficiencies = gapResponses.map((response, idx) => {
+    const gap = gaps[response.gapIndex];
+    return `${gap?.category}: ${response.proficiencyLevel}`;
+  }).join("\n");
+
+  const prompt = `You are an expert resume writer specializing in ATS-friendly resumes. Create a perfectly formatted, tailored resume based on the original content.
+
+ORIGINAL RESUME:
+${originalResumeText}
+
+JOB DESCRIPTION:
+${jobDescription.substring(0, 2000)}
+
+IDENTIFIED STRENGTHS (highlight these):
+${strengths.join("\n")}
+
+USER'S PROFICIENCY IN GAP AREAS:
+${userProficiencies}
+
+CRITICAL RULES:
+1. DO NOT hallucinate or exaggerate - use ONLY information from the original resume
+2. DO NOT add fake skills, experiences, or qualifications
+3. Reorder and reword content to emphasize relevant experience for this specific job
+4. Use keywords from the job description naturally throughout (ATS optimization)
+5. Keep the same factual information but present it more effectively
+6. If user has basic/moderate proficiency in a gap area mentioned, you MAY add it to skills section if it's truthful
+7. Format should be clean, professional, and ATS-friendly (no tables, columns, or special formatting)
+8. Include all sections: Contact Info, Professional Summary, Experience, Education, Skills
+
+STRUCTURE:
+[FULL NAME]
+[Contact Information]
+
+PROFESSIONAL SUMMARY
+[2-3 sentences tailored to this role]
+
+PROFESSIONAL EXPERIENCE
+[Most Recent Job]
+[Job Title] | [Company] | [Dates]
+• [Achievement/responsibility relevant to target role]
+• [Achievement/responsibility relevant to target role]
+[Continue for all positions...]
+
+EDUCATION
+[Degree] | [Institution] | [Year]
+
+SKILLS
+[Categorized skills relevant to the job]
+
+Respond with ONLY the formatted resume text, no JSON, no explanations, no preamble.`;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: prompt,
+  });
+
+  return response.text || "";
+}

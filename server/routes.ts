@@ -225,7 +225,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         alignmentRationale: matchResult.alignmentRationale,
         gaps: matchResult.gaps,
         strengths: matchResult.strengths,
-        recommendations: matchResult.recommendations,
       });
 
       res.json(jobMatch);
@@ -254,6 +253,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(jobMatch);
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to fetch job match" });
+    }
+  });
+
+  app.post("/api/job-matches/:id/submit-responses", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const jobMatch = await storage.getJobMatch(req.params.id);
+      if (!jobMatch) {
+        return res.status(404).json({ message: "Job match not found" });
+      }
+
+      const resume = await storage.getResume(jobMatch.resumeId);
+      if (!resume || resume.userId !== req.session.userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      const { gapResponses } = req.body;
+      if (!Array.isArray(gapResponses)) {
+        return res.status(400).json({ message: "Gap responses must be an array" });
+      }
+
+      const validProficiencyLevels = ["none", "basic", "moderate", "advanced"];
+      for (const response of gapResponses) {
+        if (typeof response.gapIndex !== "number" || 
+            !validProficiencyLevels.includes(response.proficiencyLevel)) {
+          return res.status(400).json({ message: "Invalid gap response format" });
+        }
+      }
+
+      const { generateFinalVerdict } = await import("./gemini.js");
+      const verdict = await generateFinalVerdict(
+        resume.extractedText,
+        jobMatch.jobDescription,
+        jobMatch.alignmentScore,
+        jobMatch.gaps,
+        gapResponses
+      );
+
+      const updated = await storage.updateJobMatchResponses(
+        req.params.id,
+        gapResponses,
+        verdict.verdict,
+        verdict.shouldApply
+      );
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Submit responses error:", error);
+      res.status(500).json({ message: error.message || "Failed to submit responses" });
+    }
+  });
+
+  app.post("/api/job-matches/:id/generate-resume", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const jobMatch = await storage.getJobMatch(req.params.id);
+      if (!jobMatch) {
+        return res.status(404).json({ message: "Job match not found" });
+      }
+
+      const resume = await storage.getResume(jobMatch.resumeId);
+      if (!resume || resume.userId !== req.session.userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      if (!jobMatch.gapResponses || jobMatch.gapResponses.length === 0) {
+        return res.status(400).json({ message: "Please submit gap responses first" });
+      }
+
+      const { generateTailoredResume } = await import("./gemini.js");
+      const tailoredResume = await generateTailoredResume(
+        resume.extractedText,
+        jobMatch.jobDescription,
+        jobMatch.strengths,
+        jobMatch.gaps,
+        jobMatch.gapResponses
+      );
+
+      const updated = await storage.updateJobMatchResume(req.params.id, tailoredResume);
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Generate resume error:", error);
+      res.status(500).json({ message: error.message || "Failed to generate tailored resume" });
     }
   });
 

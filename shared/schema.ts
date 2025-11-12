@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -65,7 +65,13 @@ export const jobMatches = pgTable("job_matches", {
     severity: "high" | "medium" | "low";
   }>>(),
   strengths: jsonb("strengths").notNull().$type<string[]>(),
-  recommendations: jsonb("recommendations").notNull().$type<string[]>(),
+  gapResponses: jsonb("gap_responses").$type<Array<{
+    gapIndex: number;
+    proficiencyLevel: "none" | "basic" | "moderate" | "advanced";
+  }>>(),
+  finalVerdict: text("final_verdict"),
+  shouldApply: boolean("should_apply"),
+  tailoredResumeContent: text("tailored_resume_content"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

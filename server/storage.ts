@@ -34,6 +34,13 @@ export interface IStorage {
   getJobMatch(id: string): Promise<JobMatch | undefined>;
   getJobMatchesByResumeId(resumeId: string): Promise<JobMatch[]>;
   createJobMatch(jobMatch: InsertJobMatch): Promise<JobMatch>;
+  updateJobMatchResponses(
+    id: string,
+    gapResponses: Array<{ gapIndex: number; proficiencyLevel: string }>,
+    finalVerdict: string,
+    shouldApply: boolean
+  ): Promise<JobMatch | undefined>;
+  updateJobMatchResume(id: string, tailoredResumeContent: string): Promise<JobMatch | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -132,6 +139,37 @@ export class MemStorage implements IStorage {
     this.jobMatches.set(id, jobMatch);
     return jobMatch;
   }
+
+  async updateJobMatchResponses(
+    id: string,
+    gapResponses: Array<{ gapIndex: number; proficiencyLevel: string }>,
+    finalVerdict: string,
+    shouldApply: boolean
+  ): Promise<JobMatch | undefined> {
+    const jobMatch = this.jobMatches.get(id);
+    if (!jobMatch) return undefined;
+
+    const updated: JobMatch = {
+      ...jobMatch,
+      gapResponses: gapResponses as any,
+      finalVerdict,
+      shouldApply,
+    };
+    this.jobMatches.set(id, updated);
+    return updated;
+  }
+
+  async updateJobMatchResume(id: string, tailoredResumeContent: string): Promise<JobMatch | undefined> {
+    const jobMatch = this.jobMatches.get(id);
+    if (!jobMatch) return undefined;
+
+    const updated: JobMatch = {
+      ...jobMatch,
+      tailoredResumeContent,
+    };
+    this.jobMatches.set(id, updated);
+    return updated;
+  }
 }
 
 export class DbStorage implements IStorage {
@@ -206,6 +244,33 @@ export class DbStorage implements IStorage {
 
   async createJobMatch(insertJobMatch: InsertJobMatch): Promise<JobMatch> {
     const result = await this.db.insert(jobMatches).values(insertJobMatch).returning();
+    return result[0];
+  }
+
+  async updateJobMatchResponses(
+    id: string,
+    gapResponses: Array<{ gapIndex: number; proficiencyLevel: string }>,
+    finalVerdict: string,
+    shouldApply: boolean
+  ): Promise<JobMatch | undefined> {
+    const result = await this.db
+      .update(jobMatches)
+      .set({
+        gapResponses: gapResponses as any,
+        finalVerdict,
+        shouldApply,
+      })
+      .where(eq(jobMatches.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async updateJobMatchResume(id: string, tailoredResumeContent: string): Promise<JobMatch | undefined> {
+    const result = await this.db
+      .update(jobMatches)
+      .set({ tailoredResumeContent })
+      .where(eq(jobMatches.id, id))
+      .returning();
     return result[0];
   }
 }
