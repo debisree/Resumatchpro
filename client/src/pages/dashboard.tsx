@@ -27,7 +27,7 @@ export default function Dashboard() {
     queryKey: ["/api/resumes"],
   });
 
-  const resumes = allResumes ? [allResumes[0]] : [];
+  const resumes = allResumes && allResumes.length > 0 ? [allResumes[0]] : [];
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
