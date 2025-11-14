@@ -131,58 +131,136 @@ export default function JobMatchResults() {
     return parts.length > 0 ? parts : [{ text }];
   };
 
+  const parseInlineMarkdown = (text: string): any[] => {
+    const parts: any[] = [];
+    let currentIndex = 0;
+    
+    // Parse bold (**text**) and links [text](url)
+    const boldRegex = /\*\*(.+?)\*\*/g;
+    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    
+    // Combine both patterns
+    const combinedRegex = /(\*\*(.+?)\*\*)|(\[([^\]]+)\]\(([^)]+)\))/g;
+    let match;
+    
+    while ((match = combinedRegex.exec(text)) !== null) {
+      // Add text before the match
+      if (match.index > currentIndex) {
+        parts.push({ text: text.substring(currentIndex, match.index) });
+      }
+      
+      // Check if it's bold or link
+      if (match[1]) {
+        // Bold text
+        parts.push({ text: match[2], bold: true });
+      } else if (match[3]) {
+        // Link
+        parts.push({ 
+          text: match[4], 
+          link: match[5],
+          color: '#0066cc',
+          decoration: 'underline'
+        });
+      }
+      
+      currentIndex = match.index + match[0].length;
+    }
+    
+    // Add remaining text
+    if (currentIndex < text.length) {
+      parts.push({ text: text.substring(currentIndex) });
+    }
+    
+    return parts.length > 0 ? parts : [{ text }];
+  };
+
   const handleDownloadResume = () => {
     if (!jobMatch?.tailoredResumeContent) return;
 
     const content = jobMatch.tailoredResumeContent;
-    const lines = content.split('\n').filter(line => line.trim());
+    const lines = content.split('\n');
     
     const docContent: any[] = [];
+    let bulletItems: any[] = [];
     
-    for (const line of lines) {
-      const trimmedLine = line.trim();
+    for (let i = 0; i < lines.length; i++) {
+      const trimmedLine = lines[i].trim();
       
+      // Skip empty lines unless we have pending bullets
+      if (!trimmedLine) {
+        if (bulletItems.length > 0) {
+          docContent.push({
+            ul: bulletItems,
+            margin: [0, 2, 0, 4],
+            fontSize: 10,
+          });
+          bulletItems = [];
+        }
+        continue;
+      }
+      
+      // Handle headings
       if (trimmedLine.startsWith('# ')) {
+        if (bulletItems.length > 0) {
+          docContent.push({
+            ul: bulletItems,
+            margin: [0, 2, 0, 4],
+            fontSize: 10,
+          });
+          bulletItems = [];
+        }
         const text = trimmedLine.substring(2);
         docContent.push({
-          text: parseMarkdownLinks(text),
+          text: parseInlineMarkdown(text),
           fontSize: 20,
           bold: true,
           margin: [0, 10, 0, 5],
         });
       } else if (trimmedLine.startsWith('## ')) {
+        if (bulletItems.length > 0) {
+          docContent.push({
+            ul: bulletItems,
+            margin: [0, 2, 0, 4],
+            fontSize: 10,
+          });
+          bulletItems = [];
+        }
         const text = trimmedLine.substring(3);
         docContent.push({
-          text: parseMarkdownLinks(text),
+          text: parseInlineMarkdown(text),
           fontSize: 14,
           bold: true,
           margin: [0, 8, 0, 4],
         });
-      } else if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('• ')) {
+      } else if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ') || trimmedLine.startsWith('• ')) {
+        // Collect bullet items
         const text = trimmedLine.substring(2);
+        bulletItems.push(parseInlineMarkdown(text));
+      } else {
+        // Regular paragraph - flush any pending bullets first
+        if (bulletItems.length > 0) {
+          docContent.push({
+            ul: bulletItems,
+            margin: [0, 2, 0, 4],
+            fontSize: 10,
+          });
+          bulletItems = [];
+        }
         docContent.push({
-          text: parseMarkdownLinks(text),
-          margin: [10, 2, 0, 2],
-          fontSize: 10,
-        });
-      } else if (trimmedLine.startsWith('**') && trimmedLine.endsWith('**')) {
-        const text = trimmedLine.substring(2, trimmedLine.length - 2);
-        const parsedParts = parseMarkdownLinks(text);
-        docContent.push({
-          text: parsedParts.map(part => ({
-            ...part,
-            bold: true,
-          })),
-          margin: [0, 3, 0, 3],
-          fontSize: 10,
-        });
-      } else if (trimmedLine) {
-        docContent.push({
-          text: parseMarkdownLinks(trimmedLine),
+          text: parseInlineMarkdown(trimmedLine),
           margin: [0, 3, 0, 3],
           fontSize: 10,
         });
       }
+    }
+    
+    // Flush any remaining bullets
+    if (bulletItems.length > 0) {
+      docContent.push({
+        ul: bulletItems,
+        margin: [0, 2, 0, 4],
+        fontSize: 10,
+      });
     }
 
     const documentDefinition = {

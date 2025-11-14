@@ -69,6 +69,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  const detectMimeType = (buffer: Buffer, filename: string, reportedMime: string): string => {
+    const header = buffer.slice(0, 10);
+    
+    // Check for PDF signature
+    if (header.slice(0, 5).toString() === '%PDF-') {
+      return 'application/pdf';
+    }
+    
+    // Check for PNG signature
+    if (header[0] === 0x89 && header[1] === 0x50 && header[2] === 0x4E && header[3] === 0x47) {
+      return 'image/png';
+    }
+    
+    // Check for JPEG signature
+    if (header[0] === 0xFF && header[1] === 0xD8 && header[2] === 0xFF) {
+      return 'image/jpeg';
+    }
+    
+    // Check for DOCX (ZIP-based) signature
+    if (header[0] === 0x50 && header[1] === 0x4B && header[2] === 0x03 && header[3] === 0x04) {
+      if (filename.toLowerCase().endsWith('.docx')) {
+        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      }
+    }
+    
+    // Fall back to reported MIME type
+    return reportedMime;
+  };
+
   app.post("/api/resumes/upload", upload.single("file"), async (req, res) => {
     try {
       if (!req.session.userId) {
@@ -79,7 +108,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      const extractedText = await extractText(req.file.buffer, req.file.mimetype);
+      // Detect actual MIME type from file content
+      const actualMimeType = detectMimeType(req.file.buffer, req.file.originalname, req.file.mimetype);
+      
+      console.log(`Upload: ${req.file.originalname}, reported MIME: ${req.file.mimetype}, detected MIME: ${actualMimeType}, size: ${req.file.size}`);
+
+      const extractedText = await extractText(req.file.buffer, actualMimeType);
 
       if (!extractedText || extractedText.length < 50) {
         return res.status(400).json({ 
@@ -91,7 +125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: req.session.userId,
         filename: req.file.originalname,
         filesize: req.file.size,
-        mimeType: req.file.mimetype,
+        mimeType: actualMimeType,
         extractedText,
       });
 
@@ -192,29 +226,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/job-matches/analyze", async (req, res) => {
     try {
+      console.log("[Job Match] Starting analysis request...");
+      
       if (!req.session.userId) {
+        console.log("[Job Match] No user session");
         return res.status(401).json({ message: "Not authenticated" });
       }
 
       const { jobDescription, jobRole, jobLocation } = req.body;
+      console.log(`[Job Match] Request params - Role: ${jobRole}, Location: ${jobLocation}, Custom JD: ${jobDescription ? 'Yes' : 'No'}`);
 
       const resumes = await storage.getResumesByUserId(req.session.userId);
       if (!resumes || resumes.length === 0) {
+        console.log("[Job Match] No resumes found for user");
         return res.status(400).json({ message: "Please upload a resume first" });
       }
 
       const resume = resumes[0];
+      console.log(`[Job Match] Using resume: ${resume.filename}, text length: ${resume.extractedText?.length || 0}`);
+      
       let finalJobDescription = jobDescription;
 
       if (!finalJobDescription && jobRole && jobLocation) {
+        console.log("[Job Match] Generating job description from role+location...");
         finalJobDescription = await generateJobDescription(jobRole, jobLocation);
+        console.log(`[Job Match] Generated JD length: ${finalJobDescription?.length || 0}`);
       }
 
       if (!finalJobDescription) {
+        console.log("[Job Match] No job description provided");
         return res.status(400).json({ message: "Job description is required" });
       }
 
+      console.log("[Job Match] Calling AI to analyze match...");
       const matchResult = await analyzeJobMatch(resume.extractedText, finalJobDescription);
+      console.log(`[Job Match] AI analysis complete - Score: ${matchResult.alignmentScore}, Gaps: ${matchResult.gaps.length}, Strengths: ${matchResult.strengths.length}`);
 
       const jobMatch = await storage.createJobMatch({
         resumeId: resume.id,
@@ -227,9 +273,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         strengths: matchResult.strengths,
       });
 
+      console.log(`[Job Match] Created job match with ID: ${jobMatch.id}`);
       res.json(jobMatch);
     } catch (error: any) {
-      console.error("Job match analysis error:", error);
+      console.error("[Job Match] Analysis error:", error);
+      console.error("[Job Match] Error stack:", error.stack);
       res.status(500).json({ message: error.message || "Failed to analyze job match" });
     }
   });

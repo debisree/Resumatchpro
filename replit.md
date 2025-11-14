@@ -181,7 +181,10 @@ Preferred communication style: Simple, everyday language.
 
 **Document Generation**:
 - pdfmake library for client-side PDF resume generation
-- Virtual File System (VFS) for embedded fonts
-- Parses markdown-formatted resume content into structured PDF with headings, bullets, clickable hyperlinks, and formatting
-- ATS-friendly output with consistent styling
-- Markdown links [text](url) converted to clickable hyperlinks with blue color and underline
+- Virtual File System (VFS) for embedded fonts using addVirtualFileSystem() method
+- Native PDF formatting (no markdown syntax in output):
+  - **Bold text**: `**text**` parsed to pdfMake bold format (actual bold, not asterisks)
+  - **Bullets**: `- item` or `* item` rendered as pdfMake `ul` structure (actual bullet glyphs •, not asterisks)
+  - **Links**: `[text](url)` converted to clickable hyperlinks with blue color and underline
+- Inline formatting parser handles mixed content (e.g., "Worked on **Docker** and **Kubernetes**" renders with bold words)
+- ATS-friendly output with consistent styling and professional typography
