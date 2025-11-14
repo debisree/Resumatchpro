@@ -89,7 +89,7 @@ Preferred communication style: Simple, everyday language.
     - All contact links maintained (email, phone, LinkedIn, GitHub, portfolio)
     - Gap proficiency responses integrated (emphasizes skills where user has Basic/Moderate/Advanced proficiency)
     - No hallucinations - only uses real information from original resume
-12. Resume content stored in database and downloaded as DOCX file via client-side generation
+12. Resume content stored in database and downloaded as PDF file via client-side generation
 
 ### Data Storage
 
@@ -180,7 +180,8 @@ Preferred communication style: Simple, everyday language.
 - React Hook Form with Zod validation (@hookform/resolvers)
 
 **Document Generation**:
-- docx library for client-side DOCX resume generation (~100KB bundle)
-- file-saver for triggering browser downloads
-- Parses markdown-formatted resume content into structured DOCX with headings, bullets, and formatting
+- pdfmake library for client-side PDF resume generation
+- Virtual File System (VFS) for embedded fonts
+- Parses markdown-formatted resume content into structured PDF with headings, bullets, clickable hyperlinks, and formatting
 - ATS-friendly output with consistent styling
+- Markdown links [text](url) converted to clickable hyperlinks with blue color and underline
