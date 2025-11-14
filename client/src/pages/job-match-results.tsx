@@ -17,8 +17,10 @@ import { ArrowLeft, CheckCircle2, AlertCircle, Send, FileDown, Loader2 } from "l
 import type { JobMatch } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, ExternalHyperlink } from "docx";
-import { saveAs } from "file-saver";
+import pdfMake from "pdfmake/build/pdfmake";
+import pdfFonts from "pdfmake/build/vfs_fonts";
+
+(pdfMake as any).addVirtualFileSystem(pdfFonts);
 
 const SEVERITY_STYLES = {
   high: { variant: "destructive" as const, label: "Critical" },
@@ -101,112 +103,96 @@ export default function JobMatchResults() {
     submitResponsesMutation.mutate(responses);
   };
 
-  const parseMarkdownLine = (text: string): (TextRun | ExternalHyperlink)[] => {
+  const parseMarkdownLinks = (text: string): any[] => {
     const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
-    const parts: (TextRun | ExternalHyperlink)[] = [];
+    const parts: any[] = [];
     let lastIndex = 0;
     let match;
 
     while ((match = linkRegex.exec(text)) !== null) {
       if (match.index > lastIndex) {
-        parts.push(new TextRun(text.substring(lastIndex, match.index)));
+        parts.push({ text: text.substring(lastIndex, match.index) });
       }
       
-      parts.push(
-        new ExternalHyperlink({
-          children: [
-            new TextRun({
-              text: match[1],
-              style: "Hyperlink",
-            }),
-          ],
-          link: match[2],
-        })
-      );
+      parts.push({
+        text: match[1],
+        link: match[2],
+        color: 'blue',
+        decoration: 'underline',
+      });
       
       lastIndex = match.index + match[0].length;
     }
 
     if (lastIndex < text.length) {
-      parts.push(new TextRun(text.substring(lastIndex)));
+      parts.push({ text: text.substring(lastIndex) });
     }
 
-    return parts.length > 0 ? parts : [new TextRun(text)];
+    return parts.length > 0 ? parts : [{ text }];
   };
 
-  const handleDownloadResume = async () => {
+  const handleDownloadResume = () => {
     if (!jobMatch?.tailoredResumeContent) return;
 
     const content = jobMatch.tailoredResumeContent;
     const lines = content.split('\n').filter(line => line.trim());
     
-    const children: Paragraph[] = [];
+    const docContent: any[] = [];
     
     for (const line of lines) {
       const trimmedLine = line.trim();
       
       if (trimmedLine.startsWith('# ')) {
         const text = trimmedLine.substring(2);
-        children.push(
-          new Paragraph({
-            children: parseMarkdownLine(text),
-            heading: HeadingLevel.HEADING_1,
-            spacing: { before: 200, after: 100 },
-          })
-        );
+        docContent.push({
+          text: parseMarkdownLinks(text),
+          fontSize: 20,
+          bold: true,
+          margin: [0, 10, 0, 5],
+        });
       } else if (trimmedLine.startsWith('## ')) {
         const text = trimmedLine.substring(3);
-        children.push(
-          new Paragraph({
-            children: parseMarkdownLine(text),
-            heading: HeadingLevel.HEADING_2,
-            spacing: { before: 150, after: 80 },
-          })
-        );
+        docContent.push({
+          text: parseMarkdownLinks(text),
+          fontSize: 14,
+          bold: true,
+          margin: [0, 8, 0, 4],
+        });
       } else if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('• ')) {
         const text = trimmedLine.substring(2);
-        children.push(
-          new Paragraph({
-            children: parseMarkdownLine(text),
-            bullet: { level: 0 },
-            spacing: { after: 40 },
-          })
-        );
+        docContent.push({
+          text: parseMarkdownLinks(text),
+          margin: [10, 2, 0, 2],
+          fontSize: 10,
+        });
       } else if (trimmedLine.startsWith('**') && trimmedLine.endsWith('**')) {
         const text = trimmedLine.substring(2, trimmedLine.length - 2);
-        const parsedParts = parseMarkdownLine(text);
-        children.push(
-          new Paragraph({
-            children: parsedParts.map(part => {
-              if (part instanceof TextRun) {
-                return new TextRun({ text: part.text || '', bold: true });
-              }
-              return part;
-            }),
-            spacing: { after: 60 },
-          })
-        );
+        const parsedParts = parseMarkdownLinks(text);
+        docContent.push({
+          text: parsedParts.map(part => ({
+            ...part,
+            bold: true,
+          })),
+          margin: [0, 3, 0, 3],
+          fontSize: 10,
+        });
       } else if (trimmedLine) {
-        children.push(
-          new Paragraph({
-            children: parseMarkdownLine(trimmedLine),
-            spacing: { after: 60 },
-          })
-        );
+        docContent.push({
+          text: parseMarkdownLinks(trimmedLine),
+          margin: [0, 3, 0, 3],
+          fontSize: 10,
+        });
       }
     }
 
-    const doc = new Document({
-      sections: [
-        {
-          properties: {},
-          children,
-        },
-      ],
-    });
+    const documentDefinition = {
+      content: docContent,
+      defaultStyle: {
+        font: 'Roboto',
+      },
+    };
 
-    const blob = await Packer.toBlob(doc);
-    saveAs(blob, `tailored-resume-${jobMatch.jobRole || "job"}.docx`);
+    pdfMake.createPdf(documentDefinition).download(`tailored-resume-${jobMatch.jobRole || "job"}.pdf`);
   };
 
   if (isLoading) {
@@ -319,7 +305,7 @@ export default function JobMatchResults() {
                   </p>
                   <div className="pl-4">
                     <Select
-                      value={gapResponses[index] || ""}
+                      value={gapResponses[index]}
                       onValueChange={(value) => handleProficiencyChange(index, value)}
                       disabled={hasSubmittedResponses}
                     >
