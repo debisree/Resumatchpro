@@ -7,10 +7,13 @@ import {
   type InsertAnalysis,
   type JobMatch,
   type InsertJobMatch,
+  type CareerRoadmap,
+  type InsertCareerRoadmap,
   users,
   resumes,
   analyses,
-  jobMatches
+  jobMatches,
+  careerRoadmaps
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-serverless";
@@ -41,6 +44,10 @@ export interface IStorage {
     shouldApply: boolean
   ): Promise<JobMatch | undefined>;
   updateJobMatchResume(id: string, changesSummary: string, tailoredResumeContent: string): Promise<JobMatch | undefined>;
+  
+  getCareerRoadmap(id: string): Promise<CareerRoadmap | undefined>;
+  getCareerRoadmapsByUserId(userId: string): Promise<CareerRoadmap[]>;
+  createCareerRoadmap(careerRoadmap: InsertCareerRoadmap): Promise<CareerRoadmap>;
 }
 
 export class MemStorage implements IStorage {
@@ -48,12 +55,14 @@ export class MemStorage implements IStorage {
   private resumes: Map<string, Resume>;
   private analyses: Map<string, Analysis>;
   private jobMatches: Map<string, JobMatch>;
+  private careerRoadmaps: Map<string, CareerRoadmap>;
 
   constructor() {
     this.users = new Map();
     this.resumes = new Map();
     this.analyses = new Map();
     this.jobMatches = new Map();
+    this.careerRoadmaps = new Map();
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -171,6 +180,27 @@ export class MemStorage implements IStorage {
     this.jobMatches.set(id, updated);
     return updated;
   }
+
+  async getCareerRoadmap(id: string): Promise<CareerRoadmap | undefined> {
+    return this.careerRoadmaps.get(id);
+  }
+
+  async getCareerRoadmapsByUserId(userId: string): Promise<CareerRoadmap[]> {
+    return Array.from(this.careerRoadmaps.values())
+      .filter((roadmap) => roadmap.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async createCareerRoadmap(insertCareerRoadmap: InsertCareerRoadmap): Promise<CareerRoadmap> {
+    const id = randomUUID();
+    const careerRoadmap: CareerRoadmap = {
+      id,
+      ...insertCareerRoadmap,
+      createdAt: new Date()
+    };
+    this.careerRoadmaps.set(id, careerRoadmap);
+    return careerRoadmap;
+  }
 }
 
 export class DbStorage implements IStorage {
@@ -272,6 +302,24 @@ export class DbStorage implements IStorage {
       .set({ changesSummary, tailoredResumeContent })
       .where(eq(jobMatches.id, id))
       .returning();
+    return result[0];
+  }
+
+  async getCareerRoadmap(id: string): Promise<CareerRoadmap | undefined> {
+    const result = await this.db.select().from(careerRoadmaps).where(eq(careerRoadmaps.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getCareerRoadmapsByUserId(userId: string): Promise<CareerRoadmap[]> {
+    return await this.db
+      .select()
+      .from(careerRoadmaps)
+      .where(eq(careerRoadmaps.userId, userId))
+      .orderBy(desc(careerRoadmaps.createdAt));
+  }
+
+  async createCareerRoadmap(insertCareerRoadmap: InsertCareerRoadmap): Promise<CareerRoadmap> {
+    const result = await this.db.insert(careerRoadmaps).values(insertCareerRoadmap).returning();
     return result[0];
   }
 }

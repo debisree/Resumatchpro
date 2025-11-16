@@ -82,3 +82,29 @@ export const insertJobMatchSchema = createInsertSchema(jobMatches).omit({
 });
 export type InsertJobMatch = z.infer<typeof insertJobMatchSchema>;
 export type JobMatch = typeof jobMatches.$inferSelect;
+
+export const careerRoadmaps = pgTable("career_roadmaps", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  resumeId: varchar("resume_id").notNull().references(() => resumes.id),
+  dreamRole: text("dream_role").notNull(),
+  dreamLocation: text("dream_location").notNull(),
+  timeframe: text("timeframe").notNull(),
+  currentGaps: jsonb("current_gaps").notNull().$type<string[]>(),
+  skillsToAcquire: jsonb("skills_to_acquire").notNull().$type<string[]>(),
+  actionPlan: jsonb("action_plan").notNull().$type<Array<{
+    phase: string;
+    duration: string;
+    actions: string[];
+  }>>(),
+  resources: jsonb("resources").notNull().$type<string[]>(),
+  milestones: jsonb("milestones").notNull().$type<string[]>(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertCareerRoadmapSchema = createInsertSchema(careerRoadmaps).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertCareerRoadmap = z.infer<typeof insertCareerRoadmapSchema>;
+export type CareerRoadmap = typeof careerRoadmaps.$inferSelect;
