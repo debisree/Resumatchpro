@@ -5,6 +5,7 @@
 ResuMatch Pro is an AI-powered resume analysis and job matching web application that helps users evaluate and improve their resumes and match them against job opportunities. The application allows users to upload resumes in various formats (PDF, DOCX, images), extracts text content, and uses Google Gemini AI to provide:
 1. **Resume Analysis**: Comprehensive completeness scores, section-by-section ratings, and actionable improvement suggestions
 2. **Job Matching**: Alignment scores (0-100%), gap analysis, strengths identification, and tailored recommendations by comparing resumes against either custom job descriptions or curated role+location combinations
+3. **Career Roadmap**: Personalized career development plans based on dream role, location, and timeframe (6 months to 2 years), including current gaps analysis, skills to acquire, phased action plans, recommended resources, and milestone tracking
 
 ## User Preferences
 
@@ -36,9 +37,10 @@ Preferred communication style: Simple, everyday language.
 - Resume analysis results page displaying AI analysis with progress bar and tabbed sections
 - Job match input page with two modes: custom job description or curated role+location selection
 - Job match results page displaying alignment scores, strengths, gaps (with severity levels), and recommendations
+- Career roadmap page with dream role/location form and comprehensive career guidance display
 
 **Navigation**:
-- Sidebar navigation with links to Dashboard and Job Match Analysis pages
+- Sidebar navigation with links to Dashboard, Job Match Analysis, and Career Roadmap pages
 - Available on all authenticated pages except landing
 
 ### Backend Architecture
@@ -50,6 +52,7 @@ Preferred communication style: Simple, everyday language.
 - `/api/resumes/*` - Resume upload and retrieval
 - `/api/analyses/*` - Resume analysis creation and retrieval
 - `/api/job-matches/*` - Job match analysis creation and retrieval
+- `/api/career-roadmaps/*` - Career roadmap generation and retrieval
 
 **Session Management**: Express-session middleware with cookie-based sessions (no password authentication in current implementation)
 
@@ -99,15 +102,32 @@ Preferred communication style: Simple, everyday language.
     - No hallucinations - only uses real information from original resume
 12. Resume content stored in database and downloaded as PDF file via client-side generation
 
+**Career Roadmap Data Flow**:
+1. User navigates to Career Roadmap page
+2. User fills in dream role, dream location, and selects timeframe (6 months to 2 years)
+3. User submits form to generate roadmap
+4. Backend validates user has uploaded a resume
+5. User's most recent resume text is retrieved
+6. Gemini analyzes current resume against dream role requirements
+7. AI generates comprehensive career guidance including:
+   - Current gaps: specific areas where user's current skills fall short
+   - Skills to acquire: key competencies needed for the dream role
+   - Action plan: phased roadmap with specific actions for each phase
+   - Resources: recommended learning materials, courses, and certifications
+   - Milestones: key checkpoints to track progress over the timeframe
+8. Career roadmap stored in database and displayed to user
+9. User can generate multiple roadmaps for different roles/locations/timeframes
+
 ### Data Storage
 
 **Current Implementation**: PostgreSQL database via Neon serverless with Drizzle ORM
 
 **Migration History**: 
 - November 12, 2025: Migrated from in-memory (MemStorage) to PostgreSQL persistence
-- All data (users, resumes, analyses) now persisted in Neon database
+- All data (users, resumes, analyses, job matches, career roadmaps) now persisted in Neon database
 - DbStorage class implements IStorage interface with full Drizzle ORM CRUD operations
 - Fallback to MemStorage available when DATABASE_URL not present
+- November 16, 2025: Added Career Roadmap feature with comprehensive career guidance generation
 
 **Database Schema**:
 
@@ -147,6 +167,20 @@ Preferred communication style: Simple, everyday language.
 - finalVerdict (text, nullable) - AI-generated recommendation on whether to apply
 - shouldApply (boolean, nullable) - AI's positive apply/don't apply decision
 - tailoredResumeContent (text, nullable) - AI-generated tailored resume content
+- createdAt (timestamp)
+
+**CareerRoadmaps Table**:
+- id (UUID primary key)
+- userId (foreign key to users)
+- resumeId (foreign key to resumes)
+- dreamRole (text) - target role the user wants to achieve
+- dreamLocation (text) - desired work location
+- timeframe (text) - "6 months", "1 year", "18 months", or "2 years"
+- currentGaps (JSONB array of strings) - areas where user's current skills fall short
+- skillsToAcquire (JSONB array of strings) - key competencies needed for dream role
+- actionPlan (JSONB array of objects with phase, duration, actions fields) - phased roadmap
+- resources (JSONB array of strings) - recommended learning materials
+- milestones (JSONB array of strings) - key checkpoints to track progress
 - createdAt (timestamp)
 
 **Storage Interface**: IStorage interface defines contract for data operations, allowing easy migration from in-memory to PostgreSQL using Drizzle ORM
