@@ -196,8 +196,10 @@ Preferred communication style: Simple, everyday language.
   - **Links**: `[text](url)` converted to clickable hyperlinks with blue color and underline
 - Inline formatting parser handles mixed content (e.g., "Worked on **Docker** and **Kubernetes**" renders with bold words)
 - **Dynamic filename generation**: Extracts user's name from resume header, downloads as `{UserName}_tailored resume.pdf`
-- **Optimized Experience section formatting** (November 16, 2025):
+- **Optimized section formatting** (November 16, 2025):
   - Reduced margins throughout for cleaner layout
   - Smart job title detection (lines with `**` and `|`) for tight spacing with bullets
-  - Professional appearance with consistent, minimal whitespace
+  - **Aligned bullet formatting**: Margin `[0, 1, 0, 3]` with `lineHeight: 1.3` for clean, professional bullet lists across all sections (Experience, Education, Leadership, Certifications)
+  - Consistent line height (1.3) applied globally for professional typography
+  - Professional appearance with no overlapping bullets or excessive whitespace
 - ATS-friendly output with consistent styling and professional typography

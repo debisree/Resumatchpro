@@ -192,8 +192,9 @@ export default function JobMatchResults() {
         if (bulletItems.length > 0) {
           docContent.push({
             ul: bulletItems,
-            margin: [0, 2, 0, 2],
+            margin: [0, 1, 0, 3],
             fontSize: 10,
+            lineHeight: 1.3,
           });
           bulletItems = [];
         }
@@ -205,8 +206,9 @@ export default function JobMatchResults() {
         if (bulletItems.length > 0) {
           docContent.push({
             ul: bulletItems,
-            margin: [0, 2, 0, 2],
+            margin: [0, 1, 0, 3],
             fontSize: 10,
+            lineHeight: 1.3,
           });
           bulletItems = [];
         }
@@ -224,8 +226,9 @@ export default function JobMatchResults() {
         if (bulletItems.length > 0) {
           docContent.push({
             ul: bulletItems,
-            margin: [0, 2, 0, 2],
+            margin: [0, 1, 0, 3],
             fontSize: 10,
+            lineHeight: 1.3,
           });
           bulletItems = [];
         }
@@ -237,8 +240,8 @@ export default function JobMatchResults() {
           margin: [0, 8, 0, 4],
         });
       } else if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ') || trimmedLine.startsWith('• ')) {
-        // Collect bullet items
-        const text = trimmedLine.substring(2);
+        // Collect bullet items - strip the bullet character
+        const text = trimmedLine.substring(2).trim();
         bulletItems.push(parseInlineMarkdown(text));
       } else {
         // Check if this is a job title line (contains ** and |)
@@ -248,8 +251,9 @@ export default function JobMatchResults() {
         if (bulletItems.length > 0) {
           docContent.push({
             ul: bulletItems,
-            margin: [0, 2, 0, 2],
+            margin: [0, 1, 0, 3],
             fontSize: 10,
+            lineHeight: 1.3,
           });
           bulletItems = [];
         }
@@ -259,6 +263,7 @@ export default function JobMatchResults() {
           text: parseInlineMarkdown(trimmedLine),
           margin: isJobTitleLine ? [0, 4, 0, 1] : [0, 2, 0, 2],
           fontSize: 10,
+          lineHeight: 1.3,
         });
       }
     }
@@ -267,8 +272,9 @@ export default function JobMatchResults() {
     if (bulletItems.length > 0) {
       docContent.push({
         ul: bulletItems,
-        margin: [0, 2, 0, 2],
+        margin: [0, 1, 0, 3],
         fontSize: 10,
+        lineHeight: 1.3,
       });
     }
 
@@ -276,6 +282,7 @@ export default function JobMatchResults() {
       content: docContent,
       defaultStyle: {
         font: 'Roboto',
+        lineHeight: 1.3,
       },
     };
 
