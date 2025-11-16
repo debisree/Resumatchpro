@@ -21,7 +21,7 @@ interface ResumeAnalysis {
 }
 
 export async function analyzeResume(resumeText: string): Promise<ResumeAnalysis> {
-  const prompt = `You are an expert resume reviewer and career coach. Analyze the following resume text and provide a comprehensive evaluation.
+  const prompt = `You are a brutally honest resume expert and career coach. Act as a recruiter reviewing this resume - be direct about weaknesses.
 
 RESUME TEXT:
 ${resumeText}
@@ -31,7 +31,7 @@ Evaluate the resume across these dimensions:
 1. COMPLETENESS SCORE (0-100):
    - Assess how complete and comprehensive the resume is
    - Consider: contact info, summary/objective, work experience, education, skills, achievements
-   - Provide a numerical score and brief rationale
+   - Provide a numerical score and brutally honest rationale
 
 2. SECTION QUALITY SCORES (0-5 each):
    - Summary: Quality and impact of professional summary/objective
@@ -46,10 +46,21 @@ Evaluate the resume across these dimensions:
    4 = Strong, well-presented
    5 = Perfect, exceptional quality
 
-3. IMPROVEMENT SUGGESTIONS:
+3. IMPROVEMENT SUGGESTIONS (BE BRUTALLY HONEST):
    - Provide 5-8 specific, actionable suggestions to improve the resume
-   - Focus on high-impact changes
-   - Be constructive and specific
+   - Call out overused buzzwords (e.g., "team player", "hard worker", "passionate")
+   - Identify vague statements lacking metrics or outcomes
+   - Flag weak action verbs (e.g., "responsible for", "helped with", "worked on")
+   - Point out where quantifiable results are missing (percentages, dollar amounts, time saved, scale)
+   - Suggest stronger action verbs (led, architected, scaled, reduced, increased, launched)
+   - Be direct: if something is weak or generic, say so clearly
+   - Focus on results-driven, impact-oriented language
+
+CRITICAL: When suggesting improvements about metrics:
+- DO say: "Add quantifiable metrics to demonstrate impact" 
+- DO say: "Replace 'managed projects' with specific outcomes and scale"
+- DO NOT invent or suggest specific numbers that aren't in the resume
+- DO NOT hallucinate metrics - only encourage the user to add their own real numbers
 
 Respond with structured JSON only, no other text.`;
 
@@ -336,7 +347,7 @@ export async function generateTailoredResume(
     .filter(Boolean)
     .join("\n");
 
-  const prompt = `You are an expert resume writer specializing in ATS-friendly resumes. Create a tailored resume optimized for the target job.
+  const prompt = `You are an expert resume writer specializing in ATS-friendly, results-driven resumes. Create a tailored resume optimized for the target job using quantifiable, impact-oriented language.
 
 ORIGINAL RESUME:
 ${originalResumeText}
@@ -350,7 +361,26 @@ ${strengths.join("\n- ")}
 SKILLS USER CONFIRMED THEY HAVE (MUST ADD TO RESUME):
 ${skillsToAdd || "None - user did not confirm proficiency in gap areas"}
 
-CRITICAL RULES:
+CRITICAL RULES FOR RESULTS-DRIVEN LANGUAGE:
+
+**QUANTIFIABLE IMPACT (NO HALLUCINATION)**:
+- Use existing metrics from the original resume - never invent new numbers
+- If original says "improved performance", keep it as-is or enhance language without adding fake metrics
+- Transform weak verbs into strong action verbs: "responsible for" → "led", "worked on" → "architected", "helped with" → "drove"
+- Emphasize scale and impact using language, not invented numbers
+- Examples of acceptable enhancements:
+  ✓ "Managed team" → "Led cross-functional team in delivering critical infrastructure"
+  ✓ "Worked on API" → "Architected and deployed REST API serving production traffic"
+  ✓ "Improved performance" → "Optimized system performance through caching and query refinement"
+  ✗ "Improved performance" → "Improved performance by 60%" (NEVER add fake metrics)
+  ✗ "Led team" → "Led team of 5 engineers" (NEVER invent team sizes)
+
+**ACTION VERB EXCELLENCE**:
+- Replace passive language with strong action verbs
+- Use: architected, engineered, led, drove, launched, scaled, optimized, reduced, increased, transformed, established, spearheaded
+- Avoid: responsible for, worked on, helped with, participated in, involved in
+
+MANDATORY PRESERVATION RULES:
 
 1. **PRESERVE ALL SECTIONS**: Keep ALL original sections
    - Keep Volunteering, Awards, Certifications, Publications, Projects, Languages - EVERYTHING
@@ -382,18 +412,19 @@ CRITICAL RULES:
 SECTION 1 - CHANGES SUMMARY (for UI display only):
 # Changes Made
 
-## Modifications:
-- [List 4-6 specific changes, e.g., "Added Docker and Kubernetes to Skills based on user confirmation", "Emphasized REST API experience"]
+## Language Enhancements:
+- [List 4-6 specific language improvements, e.g., "Transformed 'worked on microservices' to 'architected and deployed microservices'", "Enhanced 'managed team' to 'led cross-functional engineering team'"]
 
 ## Skills Added:
 - [List skills you added based on user's gap proficiency responses]
 
-## Skills Emphasized:
-- [List skills from original that match job]
+## Strengths Emphasized:
+- [List skills/experiences from original that match job requirements]
 
 ## Structure Preserved:
 - All sections maintained including Volunteering, Awards, Certifications
 - All contact links preserved (LinkedIn, GitHub, Google Scholar, email, phone)
+- All existing metrics preserved without hallucination
 
 ===SEPARATOR===
 

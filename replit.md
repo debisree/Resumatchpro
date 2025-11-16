@@ -61,7 +61,15 @@ Preferred communication style: Simple, everyday language.
    - DOCX: mammoth library
    - Images: Tesseract.js for OCR
 
-**AI Integration**: Google Gemini AI via `@google/genai` SDK with structured JSON schema output for both resume analysis and job matching
+**AI Integration**: 
+- Google Gemini AI (gemini-2.5-flash model) via `@google/genai` SDK
+- Structured JSON schema output for both resume analysis and job matching
+- **Enhanced Prompting Strategy** (November 16, 2025):
+  - Brutally honest resume analysis: identifies overused buzzwords, weak action verbs, missing metrics
+  - Results-driven language emphasis: transforms passive statements into impact-oriented achievements
+  - **Zero-hallucination policy**: AI enhances language WITHOUT inventing fake numbers or metrics
+  - Action verb coaching: promotes "architected", "led", "scaled" over "worked on", "helped with"
+  - Quantifiable results encouraged where real metrics exist, never fabricated
 
 **Resume Analysis Data Flow**:
 1. User uploads file → Multer processes multipart data
