@@ -4,7 +4,7 @@ import session from "express-session";
 import multer from "multer";
 import { storage } from "./storage";
 import { extractText } from "./fileExtractor";
-import { analyzeResume, analyzeJobMatch, generateJobDescription } from "./gemini";
+import { analyzeResume, analyzeJobMatch, generateJobDescription, generateCareerRoadmap } from "./gemini";
 import { insertUserSchema } from "@shared/schema";
 
 const upload = multer({
@@ -391,6 +391,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Generate resume error:", error);
       res.status(500).json({ message: error.message || "Failed to generate tailored resume" });
+    }
+  });
+
+  app.post("/api/career-roadmaps", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const { dreamRole, dreamLocation, timeframe } = req.body;
+
+      if (!dreamRole || !dreamLocation || !timeframe) {
+        return res.status(400).json({ message: "Dream role, location, and timeframe are required" });
+      }
+
+      const resumes = await storage.getResumesByUserId(req.session.userId);
+      if (resumes.length === 0) {
+        return res.status(400).json({ message: "Please upload a resume first" });
+      }
+
+      const latestResume = resumes[0];
+
+      const roadmapData = await generateCareerRoadmap(
+        latestResume.extractedText,
+        dreamRole,
+        dreamLocation,
+        timeframe
+      );
+
+      const careerRoadmap = await storage.createCareerRoadmap({
+        userId: req.session.userId,
+        resumeId: latestResume.id,
+        dreamRole,
+        dreamLocation,
+        timeframe,
+        currentGaps: roadmapData.currentGaps,
+        skillsToAcquire: roadmapData.skillsToAcquire,
+        actionPlan: roadmapData.actionPlan,
+        resources: roadmapData.resources,
+        milestones: roadmapData.milestones,
+      });
+
+      res.json(careerRoadmap);
+    } catch (error: any) {
+      console.error("Career roadmap generation error:", error);
+      res.status(500).json({ message: error.message || "Failed to generate career roadmap" });
+    }
+  });
+
+  app.get("/api/career-roadmaps/:id", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const careerRoadmap = await storage.getCareerRoadmap(req.params.id);
+      if (!careerRoadmap) {
+        return res.status(404).json({ message: "Career roadmap not found" });
+      }
+
+      if (careerRoadmap.userId !== req.session.userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      res.json(careerRoadmap);
+    } catch (error: any) {
+      console.error("Get career roadmap error:", error);
+      res.status(500).json({ message: error.message || "Failed to retrieve career roadmap" });
+    }
+  });
+
+  app.get("/api/career-roadmaps", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const careerRoadmaps = await storage.getCareerRoadmapsByUserId(req.session.userId);
+      res.json(careerRoadmaps);
+    } catch (error: any) {
+      console.error("Get career roadmaps error:", error);
+      res.status(500).json({ message: error.message || "Failed to retrieve career roadmaps" });
     }
   });
 

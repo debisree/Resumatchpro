@@ -490,3 +490,129 @@ Respond with BOTH sections separated by ===SEPARATOR===`;
     resumeMarkdown,
   };
 }
+
+interface CareerRoadmapResult {
+  currentGaps: string[];
+  skillsToAcquire: string[];
+  actionPlan: Array<{
+    phase: string;
+    duration: string;
+    actions: string[];
+  }>;
+  resources: string[];
+  milestones: string[];
+}
+
+export async function generateCareerRoadmap(
+  resumeText: string,
+  dreamRole: string,
+  dreamLocation: string,
+  timeframe: string
+): Promise<CareerRoadmapResult> {
+  const prompt = `You are an expert career coach helping someone transition to their dream role.
+
+CURRENT RESUME:
+${resumeText}
+
+CAREER GOAL:
+Dream Role: ${dreamRole}
+Dream Location: ${dreamLocation}
+Timeframe: ${timeframe}
+
+Your task is to provide a comprehensive, actionable career roadmap that guides this person from their current position to their dream role within the specified timeframe.
+
+Analyze the resume and provide:
+
+1. CURRENT GAPS (3-6 items):
+   - What specific skills, experiences, or qualifications are they currently lacking for this dream role?
+   - Be honest but constructive
+   - Focus on technical skills, soft skills, certifications, and experience gaps
+
+2. SKILLS TO ACQUIRE (5-8 specific skills):
+   - List concrete skills they need to develop
+   - Include both technical and soft skills
+   - Prioritize based on the timeframe and dream role requirements
+
+3. ACTION PLAN (3-4 phases):
+   - Break down the journey into logical phases based on the timeframe
+   - Each phase should have:
+     * phase: Name of the phase (e.g., "Foundation Building", "Skill Development", "Experience Gain", "Job Search & Interview Prep")
+     * duration: Time allocation (e.g., "Months 1-3", "Months 4-8")
+     * actions: 3-5 specific actions to take during this phase
+   - Make it realistic and achievable within the given timeframe
+   - Progress logically from skill building to job search
+
+4. RESOURCES (4-6 recommendations):
+   - Suggest specific online courses, certifications, books, or platforms
+   - Include both free and paid options
+   - Be specific (e.g., "Google Cloud Professional Data Engineer Certification" not just "cloud certification")
+
+5. MILESTONES (4-6 checkpoints):
+   - Define clear, measurable milestones to track progress
+   - Make them specific and time-bound
+   - Include both skill-based and career-based milestones
+
+Be encouraging but realistic. Consider the location-specific job market if relevant. Make all guidance actionable and specific to their situation.
+
+Respond with structured JSON only, no other text.`;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          currentGaps: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+            description: "3-6 current gaps or weaknesses"
+          },
+          skillsToAcquire: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+            description: "5-8 specific skills to develop"
+          },
+          actionPlan: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                phase: { type: Type.STRING },
+                duration: { type: Type.STRING },
+                actions: {
+                  type: Type.ARRAY,
+                  items: { type: Type.STRING }
+                }
+              },
+              required: ["phase", "duration", "actions"]
+            },
+            description: "3-4 phases with specific actions"
+          },
+          resources: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+            description: "4-6 specific learning resources"
+          },
+          milestones: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+            description: "4-6 measurable progress checkpoints"
+          }
+        },
+        required: ["currentGaps", "skillsToAcquire", "actionPlan", "resources", "milestones"]
+      }
+    }
+  });
+
+  const roadmapData = JSON.parse(response.text || "{}");
+  
+  return {
+    currentGaps: roadmapData.currentGaps || [],
+    skillsToAcquire: roadmapData.skillsToAcquire || [],
+    actionPlan: roadmapData.actionPlan || [],
+    resources: roadmapData.resources || [],
+    milestones: roadmapData.milestones || [],
+  };
+}
