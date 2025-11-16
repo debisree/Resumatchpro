@@ -195,4 +195,9 @@ Preferred communication style: Simple, everyday language.
   - **Bullets**: `- item` or `* item` rendered as pdfMake `ul` structure (actual bullet glyphs •, not asterisks)
   - **Links**: `[text](url)` converted to clickable hyperlinks with blue color and underline
 - Inline formatting parser handles mixed content (e.g., "Worked on **Docker** and **Kubernetes**" renders with bold words)
+- **Dynamic filename generation**: Extracts user's name from resume header, downloads as `{UserName}_tailored resume.pdf`
+- **Optimized Experience section formatting** (November 16, 2025):
+  - Reduced margins throughout for cleaner layout
+  - Smart job title detection (lines with `**` and `|`) for tight spacing with bullets
+  - Professional appearance with consistent, minimal whitespace
 - ATS-friendly output with consistent styling and professional typography

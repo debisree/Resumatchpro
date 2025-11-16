@@ -182,6 +182,7 @@ export default function JobMatchResults() {
     
     const docContent: any[] = [];
     let bulletItems: any[] = [];
+    let userName = "resume"; // Default fallback
     
     for (let i = 0; i < lines.length; i++) {
       const trimmedLine = lines[i].trim();
@@ -191,7 +192,7 @@ export default function JobMatchResults() {
         if (bulletItems.length > 0) {
           docContent.push({
             ul: bulletItems,
-            margin: [0, 2, 0, 4],
+            margin: [0, 2, 0, 2],
             fontSize: 10,
           });
           bulletItems = [];
@@ -199,28 +200,31 @@ export default function JobMatchResults() {
         continue;
       }
       
-      // Handle headings
+      // Handle main heading (# Name) - extract user name
       if (trimmedLine.startsWith('# ')) {
         if (bulletItems.length > 0) {
           docContent.push({
             ul: bulletItems,
-            margin: [0, 2, 0, 4],
+            margin: [0, 2, 0, 2],
             fontSize: 10,
           });
           bulletItems = [];
         }
         const text = trimmedLine.substring(2);
+        // Extract plain text name (remove any markdown)
+        userName = text.replace(/\*\*/g, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').trim();
+        
         docContent.push({
           text: parseInlineMarkdown(text),
           fontSize: 20,
           bold: true,
-          margin: [0, 10, 0, 5],
+          margin: [0, 0, 0, 5],
         });
       } else if (trimmedLine.startsWith('## ')) {
         if (bulletItems.length > 0) {
           docContent.push({
             ul: bulletItems,
-            margin: [0, 2, 0, 4],
+            margin: [0, 2, 0, 2],
             fontSize: 10,
           });
           bulletItems = [];
@@ -237,18 +241,23 @@ export default function JobMatchResults() {
         const text = trimmedLine.substring(2);
         bulletItems.push(parseInlineMarkdown(text));
       } else {
+        // Check if this is a job title line (contains ** and |)
+        const isJobTitleLine = trimmedLine.includes('**') && trimmedLine.includes('|');
+        
         // Regular paragraph - flush any pending bullets first
         if (bulletItems.length > 0) {
           docContent.push({
             ul: bulletItems,
-            margin: [0, 2, 0, 4],
+            margin: [0, 2, 0, 2],
             fontSize: 10,
           });
           bulletItems = [];
         }
+        
+        // Job title/company lines get tighter spacing, regular paragraphs get normal spacing
         docContent.push({
           text: parseInlineMarkdown(trimmedLine),
-          margin: [0, 3, 0, 3],
+          margin: isJobTitleLine ? [0, 4, 0, 1] : [0, 2, 0, 2],
           fontSize: 10,
         });
       }
@@ -258,7 +267,7 @@ export default function JobMatchResults() {
     if (bulletItems.length > 0) {
       docContent.push({
         ul: bulletItems,
-        margin: [0, 2, 0, 4],
+        margin: [0, 2, 0, 2],
         fontSize: 10,
       });
     }
@@ -270,7 +279,9 @@ export default function JobMatchResults() {
       },
     };
 
-    pdfMake.createPdf(documentDefinition).download(`tailored-resume-${jobMatch.jobRole || "job"}.pdf`);
+    // Use extracted user name in filename
+    const safeFileName = userName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+    pdfMake.createPdf(documentDefinition).download(`${safeFileName}_tailored resume.pdf`);
   };
 
   if (isLoading) {
