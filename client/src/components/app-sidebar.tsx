@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, Target, FileText } from "lucide-react";
+import { Home, Target, FileText, Map } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -21,6 +21,11 @@ const menuItems = [
     title: "Job Match",
     url: "/job-match",
     icon: Target,
+  },
+  {
+    title: "Career Roadmap",
+    url: "/career-roadmap",
+    icon: Map,
   },
 ];
 
