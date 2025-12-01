@@ -1,0 +1,19 @@
+# Python Backend Dependencies for ResuMatch Pro
+# Install using: pip install -r python_requirements.txt
+# Or on Replit: Use the packager_install_tool
+
+fastapi==0.123.0
+uvicorn[standard]==0.38.0
+sqlalchemy==2.0.44
+psycopg2-binary==2.9.11
+google-generativeai==0.8.5
+python-multipart==0.0.20
+python-jose[cryptography]==3.5.0
+passlib[bcrypt]==1.7.4
+pypdf2==3.0.1
+python-docx==1.2.0
+pytesseract==0.3.13
+pillow==12.0.0
+reportlab==4.4.5
+python-dotenv==1.2.1
+alembic==1.17.2
