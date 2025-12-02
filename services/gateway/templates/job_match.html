@@ -97,10 +97,14 @@
                 </div>
             </div>
             
-            <button type="submit" 
-                    class="w-full py-3 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition"
+            <button type="submit" id="analyzeBtn"
+                    class="w-full py-3 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition flex items-center justify-center gap-2"
                     data-testid="button-analyze">
-                Analyze Job Match
+                <span id="btnText">Analyze Job Match</span>
+                <svg id="btnSpinner" class="hidden animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
             </button>
         </form>
     </div>
@@ -120,5 +124,16 @@ function toggleMode(mode) {
         curatedMode.classList.remove('hidden');
     }
 }
+
+document.querySelector('form').addEventListener('submit', function(e) {
+    const btn = document.getElementById('analyzeBtn');
+    const btnText = document.getElementById('btnText');
+    const btnSpinner = document.getElementById('btnSpinner');
+    
+    btn.disabled = true;
+    btn.classList.add('opacity-75', 'cursor-not-allowed');
+    btnText.textContent = 'Analyzing...';
+    btnSpinner.classList.remove('hidden');
+});
 </script>
 {% endblock %}
