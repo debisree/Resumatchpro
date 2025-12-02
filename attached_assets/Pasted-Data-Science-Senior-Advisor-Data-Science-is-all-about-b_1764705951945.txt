@@ -1,0 +1,49 @@
+Data Science Senior Advisor
+
+Data Science is all about breaking new ground to enable businesses to answer their most urgent questions. Pioneering massively parallel data-intensive analytic processing, our mission is to develop a whole new approach to generating meaning and value from petabyte-scale data sets and shape brand new methodologies, tools, statistical methods and models. What’s more, we are in collaboration with leading academics, industry experts and highly skilled engineers to equip our customers to generate sophisticated new insights from the biggest of big data.
+
+Join us to do the best work of your career and make a profound social impact as a Data Science Senior Advisor in our Data Science team in Hopkinton, Massachusetts or Round Rock, Texas.
+
+What You’ll Achieve
+
+As a Data Science Senior Advisor, you will be responsible for contributing to business strategy and influence decision making based on information gained from deep dive analysis. You will produce actionable and compelling recommendations by interpreting insights from complex data sets. You will design processes to consolidate and examine unstructured data to generate actionable insights. You will also partner with business leaders, engineers and industry experts to construct predictive models, algorithms and probability engines.
+
+You will:
+
+Solve business and customer issues utilizing AI/ML
+Build prototypes and scalable AI/ML solutions that will be integrated into software products
+Collaborate with software engineers, business stakeholders and product owners in an Agile environment
+Have complete ownership of model outcomes and drive continuous improvement
+
+Take the first step towards your dream career
+
+Every Dell Technologies team member brings something unique to the table. Here’s what we are looking for with this role:
+
+Essential Requirements
+
+Proficient with writing sophisticated, clean, and object oriented Python code
+Strong background in math, statistics, and machine Learning knowledge (deep learning, NLP, classification, forecasting, regression) with experience in ML model deployment 
+Ability to work with internal stakeholders to transfer business questions into data science problem statements 
+Ability to effectively communicate data science progress to non-technical internal stakeholders and ability to lead a team of data scientists
+5+ years of experience as a data scientist
+
+Desirable Requirements
+
+Master’s or PhD in a quantitative discipline.
+Professional experience with LLM/Agentic technologies 
+
+Compensation
+
+Dell is committed to fair and equitable compensation practices. The salary range for this position is $160,000 - $206,000.
+
+Benefits And Perks Of Working At Dell Technologies
+
+Your life. Your health. Supported by your benefits. You can explore the overall benefits experience that awaits you as a Dell Technologies team member — right now at MyWellatDell.com
+
+Who We Are
+
+We believe that each of us has the power to make an impact. That’s why we put our team members at the center of everything we do. If you’re looking for an opportunity to grow your career with some of the best minds and most advanced tech in the industry, we’re looking for you.
+
+Dell Technologies is a unique family of businesses that helps individuals and organizations transform how they work, live and play. Join us to build a future that works for everyone because Progress Takes All of Us.
+
+Dell Technologies is committed to the principle of equal employment opportunity for all employees and to providing employees with a work environment free of discrimination and harassment. Read the full Equal Employment Opportunity Policy here.
