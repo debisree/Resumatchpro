@@ -406,27 +406,161 @@ def download_tailored_resume_pdf(match_id):
         flash('Access denied.', 'error')
         return redirect(url_for('job_match'))
     
-    user_name = extract_name_from_resume(match.tailored_resume_content)
+    content = match.tailored_resume_content
+    
+    try:
+        resume_data = json.loads(content)
+        return generate_pdf_from_json(resume_data)
+    except json.JSONDecodeError:
+        return generate_pdf_from_text(content)
+
+
+def generate_pdf_from_json(data):
+    from reportlab.lib.units import inch
+    from reportlab.platypus import Spacer
+    
+    header = data.get('header', {})
+    sections = data.get('sections', [])
+    
+    name = header.get('name', 'Resume')
+    safe_name = re.sub(r'[^\w\s-]', '', name).replace(' ', '_')
+    filename = f"{safe_name}_tailored_resume.pdf"
+    
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=50, leftMargin=50, topMargin=36, bottomMargin=36)
+    
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(name='ResumeName', fontSize=16, spaceAfter=0, alignment=1, fontName='Helvetica-Bold'))
+    styles.add(ParagraphStyle(name='ResumeTitle', fontSize=10, spaceAfter=4, alignment=1, fontName='Helvetica', textColor=colors.HexColor('#555555')))
+    styles.add(ParagraphStyle(name='ContactLine', fontSize=9, spaceAfter=2, alignment=1, textColor=colors.HexColor('#333333')))
+    styles.add(ParagraphStyle(name='LinksLine', fontSize=9, spaceAfter=6, alignment=1, textColor=colors.HexColor('#0066cc')))
+    styles.add(ParagraphStyle(name='SectionHeader', fontSize=10, spaceAfter=4, spaceBefore=10, fontName='Helvetica-Bold'))
+    styles.add(ParagraphStyle(name='ResumeBody', fontSize=9, leading=12, fontName='Helvetica'))
+    styles.add(ParagraphStyle(name='BulletItem', fontSize=9, leading=12, leftIndent=15, fontName='Helvetica'))
+    styles.add(ParagraphStyle(name='JobTitleLine', fontSize=9, leading=12, fontName='Helvetica-Bold', spaceBefore=6))
+    styles.add(ParagraphStyle(name='SkillLine', fontSize=9, leading=12, fontName='Helvetica'))
+    
+    story = []
+    
+    if name:
+        story.append(Paragraph(name, styles['ResumeName']))
+        story.append(Spacer(1, 8))
+    
+    titles = header.get('titles', [])
+    if titles:
+        story.append(Paragraph(' | '.join(titles), styles['ResumeTitle']))
+    
+    contact_parts = []
+    if header.get('email'):
+        contact_parts.append(header['email'])
+    if header.get('phone'):
+        contact_parts.append(header['phone'])
+    if header.get('location'):
+        contact_parts.append(header['location'])
+    if contact_parts:
+        story.append(Paragraph(' | '.join(contact_parts), styles['ContactLine']))
+    
+    link_html = []
+    if header.get('linkedin'):
+        url = make_url(header['linkedin'])
+        link_html.append(f'<a href="{url}" color="#0066cc">LinkedIn</a>')
+    if header.get('github'):
+        url = make_url(header['github'])
+        link_html.append(f'<a href="{url}" color="#0066cc">GitHub</a>')
+    if header.get('kaggle'):
+        url = make_url(header['kaggle'])
+        link_html.append(f'<a href="{url}" color="#0066cc">Kaggle</a>')
+    if header.get('medium'):
+        url = make_url(header['medium'])
+        link_html.append(f'<a href="{url}" color="#0066cc">Medium</a>')
+    if header.get('google_scholar'):
+        url = make_url(header['google_scholar'])
+        link_html.append(f'GOOGLE SCHOLAR LINK: <a href="{url}" color="#0066cc">{url}</a>')
+    
+    if link_html:
+        story.append(Paragraph(' | '.join(link_html), styles['LinksLine']))
+    
+    for section in sections:
+        title = section.get('title', '')
+        section_type = section.get('type', 'paragraph')
+        content = section.get('content', '')
+        
+        story.append(Paragraph(title.upper(), styles['SectionHeader']))
+        
+        if section_type == 'paragraph':
+            text = content.replace('L ATEX', 'LaTeX') if isinstance(content, str) else str(content)
+            story.append(Paragraph(text, styles['ResumeBody']))
+        
+        elif section_type == 'skills':
+            if isinstance(content, list):
+                for skill in content:
+                    cat = skill.get('category', '')
+                    items = skill.get('items', '')
+                    items = items.replace('L ATEX', 'LaTeX') if isinstance(items, str) else str(items)
+                    story.append(Paragraph(f"<b>{cat}:</b> {items}", styles['SkillLine']))
+        
+        elif section_type == 'inline':
+            text = content.replace('L ATEX', 'LaTeX') if isinstance(content, str) else str(content)
+            story.append(Paragraph(text, styles['ResumeBody']))
+        
+        elif section_type == 'jobs':
+            if isinstance(content, list):
+                for job in content:
+                    job_title = job.get('job_title', '')
+                    company = job.get('company', '')
+                    location = job.get('location', '')
+                    dates = job.get('dates', '')
+                    header_line = f"{job_title} | {company} | {location} | {dates}"
+                    story.append(Paragraph(header_line, styles['JobTitleLine']))
+                    for bullet in job.get('bullets', []):
+                        bullet = bullet.replace('L ATEX', 'LaTeX') if isinstance(bullet, str) else str(bullet)
+                        story.append(Paragraph(f"• {bullet}", styles['BulletItem']))
+        
+        elif section_type == 'education':
+            if isinstance(content, list):
+                for edu in content:
+                    degree = edu.get('degree', '')
+                    institution = edu.get('institution', '')
+                    dates = edu.get('dates', '')
+                    header_line = f"{degree} | {institution} | {dates}"
+                    story.append(Paragraph(header_line, styles['JobTitleLine']))
+                    for bullet in edu.get('bullets', []):
+                        bullet = bullet.replace('L ATEX', 'LaTeX') if isinstance(bullet, str) else str(bullet)
+                        story.append(Paragraph(f"• {bullet}", styles['BulletItem']))
+        
+        elif section_type == 'bullets':
+            if isinstance(content, list):
+                for item in content:
+                    item = item.replace('L ATEX', 'LaTeX') if isinstance(item, str) else str(item)
+                    story.append(Paragraph(f"• {item}", styles['BulletItem']))
+    
+    doc.build(story)
+    buffer.seek(0)
+    
+    return send_file(buffer, as_attachment=True, download_name=filename, mimetype='application/pdf')
+
+
+def generate_pdf_from_text(content):
+    content = content.replace('L ATEX', 'LaTeX').replace('LATEX', 'LaTeX')
+    lines = [l.strip() for l in content.split('\n')]
+    
+    user_name = extract_name_from_resume(content)
     filename = f"{user_name}_tailored_resume.pdf"
     
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=50, leftMargin=50, topMargin=36, bottomMargin=36)
     
     styles = getSampleStyleSheet()
-    styles.add(ParagraphStyle(name='ResumeName', fontSize=16, spaceAfter=2, alignment=1, fontName='Helvetica-Bold'))
+    styles.add(ParagraphStyle(name='ResumeName', fontSize=16, spaceAfter=8, alignment=1, fontName='Helvetica-Bold'))
     styles.add(ParagraphStyle(name='ResumeTitle', fontSize=10, spaceAfter=4, alignment=1, fontName='Helvetica', textColor=colors.HexColor('#555555')))
     styles.add(ParagraphStyle(name='ContactLine', fontSize=9, spaceAfter=2, alignment=1, textColor=colors.HexColor('#333333')))
-    styles.add(ParagraphStyle(name='LinksLine', fontSize=9, spaceAfter=8, alignment=1, textColor=colors.HexColor('#0066cc')))
-    styles.add(ParagraphStyle(name='SectionHeader', fontSize=10, spaceAfter=4, spaceBefore=10, fontName='Helvetica-Bold', textColor=colors.HexColor('#000000')))
+    styles.add(ParagraphStyle(name='LinksLine', fontSize=9, spaceAfter=6, alignment=1, textColor=colors.HexColor('#0066cc')))
+    styles.add(ParagraphStyle(name='SectionHeader', fontSize=10, spaceAfter=4, spaceBefore=10, fontName='Helvetica-Bold'))
     styles.add(ParagraphStyle(name='ResumeBody', fontSize=9, leading=12, fontName='Helvetica'))
     styles.add(ParagraphStyle(name='BulletItem', fontSize=9, leading=12, leftIndent=15, fontName='Helvetica'))
     styles.add(ParagraphStyle(name='JobTitleLine', fontSize=9, leading=12, fontName='Helvetica-Bold', spaceBefore=6))
     
     story = []
-    content = match.tailored_resume_content
-    content = content.replace('L ATEX', 'LaTeX').replace('LATEX', 'LaTeX')
-    lines = [l.strip() for l in content.split('\n')]
-    
     section_keywords = ['PROFESSIONAL SUMMARY', 'SUMMARY', 'SKILLS', 'TECHNICAL SKILLS', 
                         'EXPERIENCE', 'PROFESSIONAL EXPERIENCE', 'WORK EXPERIENCE',
                         'EDUCATION', 'CERTIFICATIONS', 'PROJECTS', 'AWARDS', 
@@ -442,46 +576,31 @@ def download_tailored_resume_pdf(match_id):
     for i, line in enumerate(lines):
         if not line:
             continue
-        
         is_section = any(line.upper() == kw or line.upper().startswith(kw + ',') for kw in section_keywords)
         if is_section:
             header_end_idx = i
             break
-        
         has_email = '@' in line and '.' in line
         has_phone = bool(re.search(r'\(\d{3}\)\s*\d{3}[-.]?\d{4}|\d{3}[-.]?\d{3}[-.]?\d{4}', line))
         has_links = any(x in line.lower() for x in ['linkedin', 'github', 'kaggle', 'medium', 'scholar'])
         
         if not name and not has_email and not has_phone and not has_links:
-            if not any(line.upper() == kw for kw in section_keywords):
-                name = re.sub(r'[#*]', '', line).strip()
-                continue
-        
-        if name and not title and '|' in line and not has_email and not has_phone:
-            if not has_links:
-                title = line
-                continue
-        
+            name = re.sub(r'[#*]', '', line).strip()
+            continue
+        if name and not title and '|' in line and not has_email and not has_phone and not has_links:
+            title = line
+            continue
         if has_email or has_phone:
             parts = [p.strip() for p in line.split('|')]
-            contact_parts = []
-            link_parts = []
-            for p in parts:
-                if any(x in p.lower() for x in ['linkedin', 'github', 'kaggle', 'medium', 'scholar']):
-                    link_parts.append(p)
-                else:
-                    contact_parts.append(p)
+            contact_parts = [p for p in parts if not any(x in p.lower() for x in ['linkedin', 'github', 'kaggle', 'medium', 'scholar'])]
+            link_parts = [p for p in parts if any(x in p.lower() for x in ['linkedin', 'github', 'kaggle', 'medium', 'scholar'])]
             if contact_parts:
                 contact = ' | '.join(contact_parts)
             if link_parts:
                 links_text = ' | '.join(link_parts)
             continue
-        
         if has_links:
-            if links_text:
-                links_text += ' | ' + line
-            else:
-                links_text = line
+            links_text = (links_text + ' | ' + line) if links_text else line
             continue
     
     if name:
@@ -495,52 +614,42 @@ def download_tailored_resume_pdf(match_id):
         link_html = []
         for part in link_parts:
             if part:
-                url = make_url(part)
-                display = get_link_display(part)
-                link_html.append(f'<a href="{url}" color="#0066cc">{display}</a>')
+                if 'scholar' in part.lower():
+                    url = make_url(part)
+                    link_html.append(f'GOOGLE SCHOLAR LINK: <a href="{url}" color="#0066cc">{url}</a>')
+                else:
+                    url = make_url(part)
+                    display = get_link_display(part)
+                    link_html.append(f'<a href="{url}" color="#0066cc">{display}</a>')
         if link_html:
             story.append(Paragraph(' | '.join(link_html), styles['LinksLine']))
     
     current_section = None
-    
     for i, line in enumerate(lines):
-        if i < header_end_idx:
+        if i < header_end_idx or not line:
             continue
-        
-        if not line:
-            continue
-        
-        line = line.replace('L ATEX', 'LaTeX').replace('LATEX', 'LaTeX')
-        
-        is_section = any(line.upper() == kw or line.upper().startswith(kw + ',') or 
-                        line.upper().startswith(kw + ' ') for kw in section_keywords)
+        is_section = any(line.upper() == kw or line.upper().startswith(kw + ',') or line.upper().startswith(kw + ' ') for kw in section_keywords)
         if is_section:
             story.append(Paragraph(line.upper(), styles['SectionHeader']))
             current_section = line.upper()
             continue
-        
         if not current_section:
             continue
-        
         if line.startswith('•') or line.startswith('-') or line.startswith('*'):
             bullet_text = line.lstrip('•-* ').strip()
             story.append(Paragraph(f"• {bullet_text}", styles['BulletItem']))
             continue
-        
-        is_job_line = ('|' in line and any(x in line for x in ['–', '—', 'Present', '2019', '2020', '2021', '2022', '2023', '2024', '2025']))
+        is_job_line = '|' in line and any(x in line for x in ['–', '—', 'Present', '2019', '2020', '2021', '2022', '2023', '2024', '2025'])
         if is_job_line and 'EDUCATION' not in current_section:
             story.append(Paragraph(line, styles['JobTitleLine']))
             continue
-        
         if 'EDUCATION' in current_section and ('–' in line or '—' in line or any(f'{y}' in line for y in range(2004, 2026))):
             story.append(Paragraph(line, styles['JobTitleLine']))
             continue
-        
         story.append(Paragraph(line, styles['ResumeBody']))
     
     doc.build(story)
     buffer.seek(0)
-    
     return send_file(buffer, as_attachment=True, download_name=filename, mimetype='application/pdf')
 
 

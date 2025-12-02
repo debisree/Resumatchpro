@@ -233,83 +233,102 @@ SKILLS USER CONFIRMED:
 
 RULES:
 - Transform weak verbs: "responsible for" → "led", "worked on" → "architected"
-- NEVER invent metrics - only use existing numbers
+- NEVER invent metrics - only use existing numbers from original resume
 - Preserve ALL sections from original (Volunteering, Awards, Certifications, Memberships, etc.)
 - Keep ALL contact links exactly as they appear
 - Add confirmed skills to Skills section
 - Use LaTeX (not L ATEX) when referencing that tool
 
-OUTPUT FORMAT - Return TWO sections separated by ===SEPARATOR===:
+RETURN ONLY THIS JSON (no markdown, no extra text):
+{{
+  "changes_summary": ["change 1", "change 2", "change 3"],
+  "header": {{
+    "name": "Full Name, Ph.D.",
+    "titles": ["Data Scientist", "Computational Physicist"],
+    "email": "email@example.com",
+    "phone": "(xxx) xxx-xxxx",
+    "location": "City, State",
+    "linkedin": "linkedin.com/in/username",
+    "github": "github.com/username",
+    "kaggle": "kaggle.com/username",
+    "medium": "medium.com/@username",
+    "google_scholar": "scholar.google.com/citations?user=xxx"
+  }},
+  "sections": [
+    {{
+      "title": "PROFESSIONAL SUMMARY",
+      "type": "paragraph",
+      "content": "2-3 sentences here."
+    }},
+    {{
+      "title": "TECHNICAL SKILLS",
+      "type": "skills",
+      "content": [
+        {{"category": "Languages & Tools", "items": "Python, SQL, etc."}},
+        {{"category": "ML/DL", "items": "TensorFlow, PyTorch"}}
+      ]
+    }},
+    {{
+      "title": "CERTIFICATIONS",
+      "type": "inline",
+      "content": "Cert1; Cert2; Cert3"
+    }},
+    {{
+      "title": "EXPERIENCE",
+      "type": "jobs",
+      "content": [
+        {{
+          "job_title": "Job Title",
+          "company": "Company Name",
+          "location": "City, State",
+          "dates": "Start – End",
+          "bullets": ["Achievement 1", "Achievement 2"]
+        }}
+      ]
+    }},
+    {{
+      "title": "EDUCATION",
+      "type": "education",
+      "content": [
+        {{
+          "degree": "Ph.D. in Field",
+          "institution": "University Name",
+          "dates": "Year",
+          "bullets": ["Detail 1"]
+        }}
+      ]
+    }},
+    {{
+      "title": "PROFESSIONAL MEMBERSHIP, LEADERSHIP & SERVICE",
+      "type": "bullets",
+      "content": ["Item 1", "Item 2"]
+    }},
+    {{
+      "title": "AWARDS",
+      "type": "bullets",
+      "content": ["Award 1", "Award 2"]
+    }}
+  ]
+}}
 
-First section: Brief changes summary (2-3 bullet points of what was improved)
-
-===SEPARATOR===
-
-Second section: The tailored resume in this EXACT plain text format:
-
-Debisree Ray, Ph.D.
-Data Scientist | Computational Physicist
-
-debisreer@gmail.com | (662) 694-1319 | NYC / Memphis
-linkedin.com/in/debisree-ray-ph-d-82241355 | github.com/debisree | kaggle.com/debisree | medium.com/@debisreer
-
-PROFESSIONAL SUMMARY
-2-3 sentences here.
-
-TECHNICAL SKILLS
-Languages & Tools: Python, SQL, etc.
-ML/DL: skill1, skill2
-
-CERTIFICATIONS
-Cert1; Cert2; Cert3
-
-EXPERIENCE
-Job Title | Company Name | Location | Start – End
-• Achievement bullet
-• Another bullet
-
-EDUCATION
-Degree | Institution | Year
-• Details if any
-
-PROFESSIONAL MEMBERSHIP, LEADERSHIP & SERVICE
-• Item 1
-• Item 2
-
-AWARDS
-• Award 1
-• Award 2
-
-IMPORTANT FORMATTING RULES:
-1. First line must be ONLY the full name (no titles mixed in header)
-2. Second line must be ONLY professional titles separated by |
-3. Third line must be email | phone | location
-4. Fourth line must be ALL profile links separated by |
-5. Use • for ALL bullet points (not - or *)
-6. Section headers in ALL CAPS
-7. Every item in AWARDS and MEMBERSHIP sections MUST start with •"""
+Include ALL original sections. Return ONLY valid JSON."""
 
     try:
         response = model.generate_content(prompt)
         full_response = response.text
         
-        separator = "===SEPARATOR==="
-        if separator in full_response:
-            parts = full_response.split(separator, 1)
-            changes = parts[0].strip()
-            resume = parts[1].strip() if len(parts) > 1 else full_response
-            
-            for prefix in ["SECTION 1", "SECTION 2", "Section 1", "Section 2", "**SECTION", "Changes Summary:", "CHANGES SUMMARY:"]:
-                changes = changes.replace(prefix, "").strip()
-                resume = resume.replace(prefix, "").strip()
-            
-            changes = "\n".join(line.strip() for line in changes.split("\n") if line.strip() and not line.strip().startswith("---"))
-            
-            return {
-                "changesSummary": changes if changes else "Resume optimized for ATS and tailored to job requirements.",
-                "resumeMarkdown": resume if resume else full_response
-            }
+        json_text = clean_json_response(full_response)
+        resume_data = json.loads(json_text)
         
+        changes = resume_data.get('changes_summary', [])
+        changes_text = '\n'.join(f"• {c}" for c in changes) if changes else "Resume optimized for ATS."
+        
+        return {
+            "changesSummary": changes_text,
+            "resumeMarkdown": json.dumps(resume_data),
+            "resumeJson": resume_data
+        }
+    except json.JSONDecodeError:
         return {
             "changesSummary": "Resume optimized for ATS and tailored to job requirements.",
             "resumeMarkdown": full_response
