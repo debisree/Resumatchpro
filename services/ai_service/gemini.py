@@ -245,47 +245,49 @@ First section: Brief changes summary (2-3 bullet points of what was improved)
 
 ===SEPARATOR===
 
-Second section: The EXACT format below. FOLLOW THIS STRUCTURE PRECISELY:
+Second section: The tailored resume in this EXACT plain text format:
 
-HEADER_NAME: Full Name Here
-HEADER_TITLE: Professional Title | Another Title
-HEADER_CONTACT: email@email.com | (xxx) xxx-xxxx | City, State
-HEADER_LINKS: linkedin.com/in/username | github.com/username | other links
+Debisree Ray, Ph.D.
+Data Scientist | Computational Physicist
 
-SECTION: PROFESSIONAL SUMMARY
-Write 2-3 sentences summarizing qualifications here as a paragraph.
+debisreer@gmail.com | (662) 694-1319 | NYC / Memphis
+linkedin.com/in/debisree-ray-ph-d-82241355 | github.com/debisree | kaggle.com/debisree | medium.com/@debisreer
 
-SECTION: TECHNICAL SKILLS
+PROFESSIONAL SUMMARY
+2-3 sentences here.
+
+TECHNICAL SKILLS
 Languages & Tools: Python, SQL, etc.
-ML/DL: TensorFlow, PyTorch, etc.
-Other categories as needed
+ML/DL: skill1, skill2
 
-SECTION: CERTIFICATIONS
-List certifications on one line, separated by semicolons
+CERTIFICATIONS
+Cert1; Cert2; Cert3
 
-SECTION: EXPERIENCE
-JOBTITLE: Job Title | Company Name; Location | Start – End
-BULLET: Achievement with strong action verb and metrics if available
-BULLET: Another achievement bullet point
-BULLET: More achievements
+EXPERIENCE
+Job Title | Company Name | Location | Start – End
+• Achievement bullet
+• Another bullet
 
-JOBTITLE: Previous Job Title | Previous Company; Location | Start – End
-BULLET: Achievement
-BULLET: Achievement
+EDUCATION
+Degree | Institution | Year
+• Details if any
 
-SECTION: EDUCATION
-EDUTITLE: Degree Name | Institution Name | Year
-BULLET: Relevant details, honors, or projects
+PROFESSIONAL MEMBERSHIP, LEADERSHIP & SERVICE
+• Item 1
+• Item 2
 
-SECTION: PROFESSIONAL MEMBERSHIP, LEADERSHIP & SERVICE
-BULLET: Membership or leadership item
-BULLET: Another membership item
+AWARDS
+• Award 1
+• Award 2
 
-SECTION: AWARDS
-BULLET: Award name and description (Year)
-BULLET: Another award
-
-Include ALL other sections from original resume using same SECTION: format with BULLET: for items."""
+IMPORTANT FORMATTING RULES:
+1. First line must be ONLY the full name (no titles mixed in header)
+2. Second line must be ONLY professional titles separated by |
+3. Third line must be email | phone | location
+4. Fourth line must be ALL profile links separated by |
+5. Use • for ALL bullet points (not - or *)
+6. Section headers in ALL CAPS
+7. Every item in AWARDS and MEMBERSHIP sections MUST start with •"""
 
     try:
         response = model.generate_content(prompt)
