@@ -43,7 +43,15 @@ def clean_json_response(text: str) -> str:
 
 
 def analyze_resume(resume_text: str) -> Dict[str, Any]:
+    from datetime import datetime
+    current_year = datetime.now().year
+    
     prompt = f"""You are a brutally honest resume expert and career coach. Act as a recruiter reviewing this resume - be direct about weaknesses.
+
+IMPORTANT: The current year is {current_year}. When calculating years of experience:
+- If someone worked from 2021 to Present/{current_year}, that is {current_year - 2021} years
+- If dates say "to Present" or "to Current", use {current_year} as the end year
+- Calculate experience accurately based on actual start and end dates
 
 RESUME TEXT:
 {resume_text}
@@ -54,6 +62,7 @@ Evaluate the resume across these dimensions:
    - Assess how complete and comprehensive the resume is
    - Consider: contact info, summary/objective, work experience, education, skills, achievements
    - Provide a numerical score and brutally honest rationale
+   - When mentioning years of experience, calculate accurately using {current_year} as the current year
 
 2. SECTION QUALITY SCORES (0-5 each):
    - Summary: Quality and impact of professional summary/objective
@@ -266,13 +275,23 @@ Degree | Institution | Graduation Year
         
         separator = "===SEPARATOR==="
         if separator in full_response:
-            parts = full_response.split(separator)
+            parts = full_response.split(separator, 1)
+            changes = parts[0].strip()
+            resume = parts[1].strip() if len(parts) > 1 else full_response
+            
+            for prefix in ["SECTION 1", "SECTION 2", "Section 1", "Section 2", "**SECTION", "Changes Summary:", "CHANGES SUMMARY:"]:
+                changes = changes.replace(prefix, "").strip()
+                resume = resume.replace(prefix, "").strip()
+            
+            changes = "\n".join(line.strip() for line in changes.split("\n") if line.strip() and not line.strip().startswith("---"))
+            
             return {
-                "changesSummary": parts[0].strip(),
-                "resumeMarkdown": parts[1].strip() if len(parts) > 1 else full_response
+                "changesSummary": changes if changes else "Resume optimized for ATS and tailored to job requirements.",
+                "resumeMarkdown": resume if resume else full_response
             }
+        
         return {
-            "changesSummary": "Resume tailored for target position.",
+            "changesSummary": "Resume optimized for ATS and tailored to job requirements.",
             "resumeMarkdown": full_response
         }
     except Exception as e:
