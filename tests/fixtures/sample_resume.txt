@@ -1,0 +1,37 @@
+JOHN DOE
+Software Engineer
+Email: john.doe@email.com | Phone: (555) 123-4567
+LinkedIn: linkedin.com/in/johndoe | GitHub: github.com/johndoe
+
+PROFESSIONAL SUMMARY
+Experienced software engineer with 5+ years of experience in full-stack web development. Proficient in Python, JavaScript, React, and cloud technologies. Proven track record of delivering high-quality software solutions.
+
+WORK EXPERIENCE
+
+Senior Software Engineer
+Tech Company Inc. | San Francisco, CA | 2020 - Present
+- Led development of microservices architecture serving 1M+ daily users
+- Implemented CI/CD pipelines reducing deployment time by 60%
+- Mentored junior developers and conducted code reviews
+
+Software Engineer
+Startup XYZ | New York, NY | 2018 - 2020
+- Built React-based dashboard for data visualization
+- Developed RESTful APIs using Python Flask
+- Collaborated with cross-functional teams in Agile environment
+
+EDUCATION
+
+Bachelor of Science in Computer Science
+University of Technology | 2014 - 2018
+GPA: 3.8/4.0
+
+SKILLS
+Programming: Python, JavaScript, TypeScript, Java
+Frameworks: React, Flask, Django, Node.js
+Cloud: AWS, GCP, Docker, Kubernetes
+Databases: PostgreSQL, MongoDB, Redis
+
+CERTIFICATIONS
+- AWS Certified Solutions Architect
+- Google Cloud Professional Developer

@@ -1,6 +1,7 @@
 import google.generativeai as genai
 import json
 import os
+import re
 from typing import Dict, List, Any
 
 gemini_api_key = os.getenv("GEMINI_API_KEY")
@@ -8,6 +9,37 @@ if gemini_api_key:
     genai.configure(api_key=gemini_api_key)
 
 model = genai.GenerativeModel('gemini-2.0-flash-exp')
+
+
+def clean_json_response(text: str) -> str:
+    """Clean AI response to extract valid JSON."""
+    text = text.strip()
+    
+    if text.startswith("```json"):
+        text = text[7:]
+    elif text.startswith("```"):
+        text = text[3:]
+    if text.endswith("```"):
+        text = text[:-3]
+    
+    text = text.strip()
+    
+    brace_start = text.find('{')
+    if brace_start != -1:
+        brace_count = 0
+        end_pos = -1
+        for i, char in enumerate(text[brace_start:], brace_start):
+            if char == '{':
+                brace_count += 1
+            elif char == '}':
+                brace_count -= 1
+                if brace_count == 0:
+                    end_pos = i
+                    break
+        if end_pos != -1:
+            text = text[brace_start:end_pos + 1]
+    
+    return text
 
 
 def analyze_resume(resume_text: str) -> Dict[str, Any]:
@@ -42,14 +74,8 @@ Return ONLY valid JSON with this exact structure:
 
     try:
         response = model.generate_content(prompt)
-        text = response.text.strip()
-        if text.startswith("```json"):
-            text = text[7:]
-        if text.startswith("```"):
-            text = text[3:]
-        if text.endswith("```"):
-            text = text[:-3]
-        data = json.loads(text.strip())
+        text = clean_json_response(response.text)
+        data = json.loads(text)
         
         return {
             "completenessScore": min(100, max(0, data.get("completenessScore", 0))),
@@ -86,14 +112,8 @@ Return ONLY valid JSON:
 
     try:
         response = model.generate_content(prompt)
-        text = response.text.strip()
-        if text.startswith("```json"):
-            text = text[7:]
-        if text.startswith("```"):
-            text = text[3:]
-        if text.endswith("```"):
-            text = text[:-3]
-        data = json.loads(text.strip())
+        text = clean_json_response(response.text)
+        data = json.loads(text)
         
         return {
             "alignmentScore": min(100, max(0, data.get("alignmentScore", 0))),
@@ -160,14 +180,8 @@ Return ONLY valid JSON:
 
     try:
         response = model.generate_content(prompt)
-        text = response.text.strip()
-        if text.startswith("```json"):
-            text = text[7:]
-        if text.startswith("```"):
-            text = text[3:]
-        if text.endswith("```"):
-            text = text[:-3]
-        data = json.loads(text.strip())
+        text = clean_json_response(response.text)
+        data = json.loads(text)
         
         return {
             "verdict": data.get("verdict", "Unable to generate verdict."),
@@ -285,14 +299,8 @@ Return ONLY valid JSON:
 
     try:
         response = model.generate_content(prompt)
-        text = response.text.strip()
-        if text.startswith("```json"):
-            text = text[7:]
-        if text.startswith("```"):
-            text = text[3:]
-        if text.endswith("```"):
-            text = text[:-3]
-        data = json.loads(text.strip())
+        text = clean_json_response(response.text)
+        data = json.loads(text)
         
         return {
             "currentGaps": data.get("currentGaps", []),
