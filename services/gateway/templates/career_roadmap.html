@@ -18,7 +18,7 @@
     {% else %}
     <div class="bg-white rounded-xl shadow-md p-6 mb-8">
         <h2 class="text-xl font-semibold mb-4">Plan Your Career Path</h2>
-        <form action="{{ url_for('generate_roadmap') }}" method="POST" class="space-y-4">
+        <form action="{{ url_for('generate_roadmap') }}" method="POST" class="space-y-4" id="roadmapForm">
             <div>
                 <label for="dream_role" class="block text-sm font-medium text-gray-700 mb-2">Dream Role</label>
                 <input type="text" id="dream_role" name="dream_role" required
@@ -44,13 +44,42 @@
                     <option value="2 years">2 years</option>
                 </select>
             </div>
-            <button type="submit" 
-                    class="w-full py-3 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition"
+            <button type="submit" id="generateBtn"
+                    class="w-full py-3 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition flex items-center justify-center gap-2"
                     data-testid="button-generate-roadmap">
-                Generate Career Roadmap
+                <span id="btnText">Generate Career Roadmap</span>
+                <svg id="btnSpinner" class="hidden animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
             </button>
         </form>
     </div>
+    
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl p-8 max-w-sm mx-4 text-center shadow-2xl">
+            <div class="animate-spin rounded-full h-16 w-16 border-4 border-primary-200 border-t-primary-600 mx-auto mb-4"></div>
+            <h3 class="text-xl font-semibold text-gray-800 mb-2">Creating Your Career Roadmap</h3>
+            <p class="text-gray-600">Our AI is analyzing your resume and building a personalized plan...</p>
+            <p class="text-sm text-gray-400 mt-4">This may take 15-30 seconds</p>
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('roadmapForm').addEventListener('submit', function(e) {
+            const btn = document.getElementById('generateBtn');
+            const btnText = document.getElementById('btnText');
+            const btnSpinner = document.getElementById('btnSpinner');
+            const overlay = document.getElementById('loadingOverlay');
+            
+            btn.disabled = true;
+            btn.classList.add('opacity-75', 'cursor-not-allowed');
+            btnText.textContent = 'Generating...';
+            btnSpinner.classList.remove('hidden');
+            overlay.classList.remove('hidden');
+        });
+    </script>
     
     {% if roadmaps %}
     <div class="bg-white rounded-xl shadow-md p-6">
