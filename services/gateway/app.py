@@ -410,161 +410,93 @@ def download_tailored_resume_pdf(match_id):
     filename = f"{user_name}_tailored_resume.pdf"
     
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=50, leftMargin=50, topMargin=40, bottomMargin=40)
+    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=50, leftMargin=50, topMargin=36, bottomMargin=36)
     
     styles = getSampleStyleSheet()
     styles.add(ParagraphStyle(name='ResumeName', fontSize=16, spaceAfter=2, alignment=1, fontName='Helvetica-Bold'))
-    styles.add(ParagraphStyle(name='ResumeTitle', fontSize=11, spaceAfter=6, alignment=1, fontName='Helvetica', textColor=colors.HexColor('#444444')))
-    styles.add(ParagraphStyle(name='ContactLine1', fontSize=9, spaceAfter=2, alignment=1, textColor=colors.HexColor('#333333')))
-    styles.add(ParagraphStyle(name='ContactLine2', fontSize=9, spaceAfter=8, alignment=1, textColor=colors.HexColor('#0066cc')))
-    styles.add(ParagraphStyle(name='SectionHeader', fontSize=10, spaceAfter=4, spaceBefore=8, fontName='Helvetica-Bold', textColor=colors.HexColor('#000000')))
+    styles.add(ParagraphStyle(name='ResumeTitle', fontSize=10, spaceAfter=4, alignment=1, fontName='Helvetica', textColor=colors.HexColor('#555555')))
+    styles.add(ParagraphStyle(name='ContactLine', fontSize=9, spaceAfter=2, alignment=1, textColor=colors.HexColor('#333333')))
+    styles.add(ParagraphStyle(name='LinksLine', fontSize=9, spaceAfter=8, alignment=1, textColor=colors.HexColor('#0066cc')))
+    styles.add(ParagraphStyle(name='SectionHeader', fontSize=10, spaceAfter=4, spaceBefore=10, fontName='Helvetica-Bold', textColor=colors.HexColor('#000000'), borderPadding=0))
     styles.add(ParagraphStyle(name='ResumeBody', fontSize=9, leading=12, fontName='Helvetica'))
-    styles.add(ParagraphStyle(name='BulletItem', fontSize=9, leading=12, leftIndent=12, fontName='Helvetica'))
-    styles.add(ParagraphStyle(name='JobTitleLine', fontSize=9, leading=12, fontName='Helvetica-Bold', spaceBefore=4))
-    styles.add(ParagraphStyle(name='SubItem', fontSize=9, leading=12, leftIndent=12, fontName='Helvetica'))
+    styles.add(ParagraphStyle(name='BulletItem', fontSize=9, leading=12, leftIndent=15, fontName='Helvetica'))
+    styles.add(ParagraphStyle(name='JobTitleLine', fontSize=9, leading=12, fontName='Helvetica-Bold', spaceBefore=6))
+    styles.add(ParagraphStyle(name='EduTitleLine', fontSize=9, leading=12, fontName='Helvetica-Bold', spaceBefore=4))
     
     story = []
     content = match.tailored_resume_content
+    content = content.replace('L ATEX', 'LaTeX').replace('LATEX', 'LaTeX')
     lines = content.split('\n')
-    
-    section_headers = ['PROFESSIONAL SUMMARY', 'SUMMARY', 'SKILLS', 'TECHNICAL SKILLS', 'PROFESSIONAL EXPERIENCE', 
-                       'EXPERIENCE', 'WORK EXPERIENCE', 'EDUCATION', 'CERTIFICATIONS', 'PROJECTS', 
-                       'AWARDS', 'AWARDS AND HONORS', 'VOLUNTEERING', 'VOLUNTEER EXPERIENCE',
-                       'LEADERSHIP', 'PROFESSIONAL MEMBERSHIP', 'PROFESSIONAL MEMBERSHIPS',
-                       'PUBLICATIONS', 'LANGUAGES', 'INTERESTS', 'ADDITIONAL INFORMATION',
-                       'PROFESSIONAL MEMBERSHIP, LEADERSHIP & SERVICE', 'LEADERSHIP & SERVICE']
-    
-    header_processed = False
-    current_section = None
     
     name = None
     title = None
-    contact_info = []
-    links = []
+    contact = None
+    links_line = None
     
-    for i, line in enumerate(lines):
+    for line in lines:
         line = line.strip()
-        if not line:
-            continue
-        
-        line_upper = line.upper()
-        if line_upper.startswith('SECTION') or line_upper.startswith('---'):
-            continue
-            
-        is_section = any(line_upper == h or line_upper.startswith(h + ':') or line_upper.rstrip(':') == h or 
-                        h in line_upper for h in section_headers)
-        
-        if is_section:
-            break
-            
-        if not name:
-            if '|' not in line and '@' not in line and 'linkedin' not in line.lower():
-                name = re.sub(r'[#*\[\]]', '', line).strip()
-                continue
-        
-        if name and not title:
-            if '|' in line and '@' not in line and 'linkedin' not in line.lower() and not any(c.isdigit() for c in line):
-                title = re.sub(r'[#*]', '', line).strip()
-                continue
-        
-        if '@' in line or any(c.isdigit() and c not in '|' for c in line):
-            parts = re.split(r'\s*\|\s*', line)
-            for part in parts:
-                part = part.strip()
-                if not part:
-                    continue
-                if 'linkedin' in part.lower() or 'github' in part.lower() or 'kaggle' in part.lower() or 'medium' in part.lower() or 'scholar' in part.lower():
-                    links.append(part)
-                else:
-                    contact_info.append(part)
-            continue
-        
-        if 'linkedin' in line.lower() or 'github' in line.lower() or 'kaggle' in line.lower() or 'medium' in line.lower() or 'scholar' in line.lower():
-            parts = re.split(r'\s*\|\s*', line)
-            for part in parts:
-                part = part.strip()
-                if part:
-                    links.append(part)
-            continue
+        if line.startswith('HEADER_NAME:'):
+            name = line.replace('HEADER_NAME:', '').strip()
+        elif line.startswith('HEADER_TITLE:'):
+            title = line.replace('HEADER_TITLE:', '').strip()
+        elif line.startswith('HEADER_CONTACT:'):
+            contact = line.replace('HEADER_CONTACT:', '').strip()
+        elif line.startswith('HEADER_LINKS:'):
+            links_line = line.replace('HEADER_LINKS:', '').strip()
     
     if name:
         story.append(Paragraph(name, styles['ResumeName']))
     if title:
         story.append(Paragraph(title, styles['ResumeTitle']))
-    
-    if contact_info:
-        story.append(Paragraph(' | '.join(contact_info), styles['ContactLine1']))
-    
-    if links:
+    if contact:
+        story.append(Paragraph(contact, styles['ContactLine']))
+    if links_line:
+        link_parts = [p.strip() for p in links_line.split('|')]
         link_html = []
-        for link in links:
-            url = extract_url_from_text(link)
-            if url:
-                display = get_link_display_name(link)
+        for part in link_parts:
+            if part:
+                url = make_url(part)
+                display = get_link_display(part)
                 link_html.append(f'<a href="{url}" color="#0066cc">{display}</a>')
-            else:
-                link_html.append(link)
-        story.append(Paragraph(' | '.join(link_html), styles['ContactLine2']))
+        story.append(Paragraph(' | '.join(link_html), styles['LinksLine']))
     
-    in_bullet_section = False
+    current_section = None
     
-    for i, line in enumerate(lines):
+    for line in lines:
         line = line.strip()
-        
         if not line:
             continue
         
         line = line.replace('L ATEX', 'LaTeX').replace('LATEX', 'LaTeX')
         
-        line_upper = line.upper()
-        if line_upper.startswith('SECTION') or line_upper.startswith('---'):
+        if line.startswith('HEADER_'):
             continue
         
-        is_header_line = (not current_section and 
-                         (line == name or line == title or 
-                          '@' in line or 'linkedin' in line.lower() or 
-                          'github' in line.lower() or 'kaggle' in line.lower() or
-                          'medium' in line.lower() or 'scholar' in line.lower()))
-        
-        is_section_header = any(line_upper == h or line_upper.startswith(h + ':') or 
-                               line_upper.rstrip(':') == h or
-                               (h in line_upper and len(line) < 60) for h in section_headers)
-        
-        if is_section_header:
-            clean_header = re.sub(r'[#*:]', '', line).strip().upper()
-            story.append(Paragraph(clean_header, styles['SectionHeader']))
-            current_section = clean_header
-            in_bullet_section = any(x in clean_header for x in ['MEMBERSHIP', 'AWARDS', 'LEADERSHIP', 'VOLUNTEERING', 'SERVICE'])
+        if line.startswith('SECTION:'):
+            section_name = line.replace('SECTION:', '').strip().upper()
+            story.append(Paragraph(section_name, styles['SectionHeader']))
+            current_section = section_name
             continue
         
-        if not current_section:
+        if line.startswith('JOBTITLE:'):
+            job_info = line.replace('JOBTITLE:', '').strip()
+            story.append(Paragraph(job_info, styles['JobTitleLine']))
             continue
         
-        if line.startswith('•') or line.startswith('-') or line.startswith('*'):
-            bullet_text = line.lstrip('•-* ').strip()
-            bullet_text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', bullet_text)
-            bullet_text = format_links_in_text(bullet_text)
+        if line.startswith('EDUTITLE:'):
+            edu_info = line.replace('EDUTITLE:', '').strip()
+            story.append(Paragraph(edu_info, styles['EduTitleLine']))
+            continue
+        
+        if line.startswith('BULLET:'):
+            bullet_text = line.replace('BULLET:', '').strip()
+            bullet_text = format_text_links(bullet_text)
             story.append(Paragraph(f"• {bullet_text}", styles['BulletItem']))
             continue
         
-        is_job_title = ('|' in line and any(x in line for x in ['–', 'Present', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025']))
-        if is_job_title and 'EDUCATION' not in current_section:
-            clean_title = re.sub(r'\*\*(.*?)\*\*', r'\1', line)
-            clean_title = re.sub(r'[#]', '', clean_title)
-            story.append(Paragraph(clean_title, styles['JobTitleLine']))
-            continue
-        
-        if in_bullet_section and len(line) > 5 and not line.startswith('•'):
-            bullet_text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', line)
-            bullet_text = format_links_in_text(bullet_text)
-            story.append(Paragraph(f"• {bullet_text}", styles['BulletItem']))
-            continue
-        
-        clean_line = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', line)
-        clean_line = re.sub(r'[#]', '', clean_line)
-        clean_line = format_links_in_text(clean_line)
-        
-        story.append(Paragraph(clean_line, styles['ResumeBody']))
+        if current_section:
+            clean_line = format_text_links(line)
+            story.append(Paragraph(clean_line, styles['ResumeBody']))
     
     doc.build(story)
     buffer.seek(0)
@@ -572,56 +504,41 @@ def download_tailored_resume_pdf(match_id):
     return send_file(buffer, as_attachment=True, download_name=filename, mimetype='application/pdf')
 
 
-def extract_url_from_text(text):
-    text = text.lower().strip()
-    if 'linkedin.com' in text:
-        match = re.search(r'linkedin\.com/in/[^\s\)\]]+', text)
-        if match:
-            return 'https://' + match.group(0)
-        return 'https://linkedin.com'
-    if 'github.com' in text:
-        match = re.search(r'github\.com/[^\s\)\]]+', text)
-        if match:
-            return 'https://' + match.group(0)
-        return 'https://github.com'
-    if 'kaggle.com' in text:
-        match = re.search(r'kaggle\.com/[^\s\)\]]+', text)
-        if match:
-            return 'https://' + match.group(0)
-        return 'https://kaggle.com'
-    if 'medium.com' in text:
-        match = re.search(r'medium\.com/@?[^\s\)\]]+', text)
-        if match:
-            return 'https://' + match.group(0)
-        return 'https://medium.com'
-    if 'scholar.google' in text or 'google scholar' in text.lower():
-        return 'https://scholar.google.com'
-    url_match = re.search(r'https?://[^\s\)\]]+', text)
-    if url_match:
-        return url_match.group(0)
-    return None
-
-
-def get_link_display_name(text):
-    text_lower = text.lower()
-    if 'linkedin' in text_lower:
-        return 'LinkedIn'
-    if 'github' in text_lower:
-        return 'GitHub'
-    if 'kaggle' in text_lower:
-        return 'Kaggle'
-    if 'medium' in text_lower:
-        return 'Medium'
+def make_url(text):
+    text_lower = text.lower().strip()
+    if 'linkedin.com' in text_lower:
+        match = re.search(r'linkedin\.com/in/[\w-]+', text_lower)
+        return 'https://' + match.group(0) if match else 'https://linkedin.com'
+    if 'github.com' in text_lower:
+        match = re.search(r'github\.com/[\w-]+', text_lower)
+        return 'https://' + match.group(0) if match else 'https://github.com'
+    if 'kaggle.com' in text_lower:
+        match = re.search(r'kaggle\.com/[\w-]+', text_lower)
+        return 'https://' + match.group(0) if match else 'https://kaggle.com'
+    if 'medium.com' in text_lower:
+        match = re.search(r'medium\.com/@?[\w-]+', text_lower)
+        return 'https://' + match.group(0) if match else 'https://medium.com'
     if 'scholar' in text_lower:
-        return 'Google Scholar'
+        return 'https://scholar.google.com'
+    if text_lower.startswith('http'):
+        return text.strip()
+    return 'https://' + text.strip()
+
+
+def get_link_display(text):
+    t = text.lower()
+    if 'linkedin' in t: return 'LinkedIn'
+    if 'github' in t: return 'GitHub'
+    if 'kaggle' in t: return 'Kaggle'
+    if 'medium' in t: return 'Medium'
+    if 'scholar' in t: return 'Google Scholar'
     return text.strip()
 
 
-def format_links_in_text(text):
+def format_text_links(text):
     md_link = re.search(r'\[(.*?)\]\((.*?)\)', text)
     if md_link:
-        display = md_link.group(1)
-        url = md_link.group(2)
+        display, url = md_link.group(1), md_link.group(2)
         text = text.replace(md_link.group(0), f'<a href="{url}" color="#0066cc">{display}</a>')
     return text
 

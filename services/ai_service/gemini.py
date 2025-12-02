@@ -234,9 +234,10 @@ SKILLS USER CONFIRMED:
 RULES:
 - Transform weak verbs: "responsible for" → "led", "worked on" → "architected"
 - NEVER invent metrics - only use existing numbers
-- Preserve ALL sections (Volunteering, Awards, etc.)
-- Keep ALL contact links
+- Preserve ALL sections from original (Volunteering, Awards, Certifications, Memberships, etc.)
+- Keep ALL contact links exactly as they appear
 - Add confirmed skills to Skills section
+- Use LaTeX (not L ATEX) when referencing that tool
 
 OUTPUT FORMAT - Return TWO sections separated by ===SEPARATOR===:
 
@@ -244,30 +245,47 @@ First section: Brief changes summary (2-3 bullet points of what was improved)
 
 ===SEPARATOR===
 
-Second section: The full tailored resume in PLAIN TEXT format (NO markdown, NO # symbols):
+Second section: The EXACT format below. FOLLOW THIS STRUCTURE PRECISELY:
 
-FULL NAME
-Email: email@example.com | Phone: 123-456-7890 | LinkedIn: linkedin.com/in/name | Location: City, State
+HEADER_NAME: Full Name Here
+HEADER_TITLE: Professional Title | Another Title
+HEADER_CONTACT: email@email.com | (xxx) xxx-xxxx | City, State
+HEADER_LINKS: linkedin.com/in/username | github.com/username | other links
 
-PROFESSIONAL SUMMARY
-2-3 sentences summarizing qualifications.
+SECTION: PROFESSIONAL SUMMARY
+Write 2-3 sentences summarizing qualifications here as a paragraph.
 
-SKILLS
-Category1: skill1, skill2, skill3
-Category2: skill1, skill2
+SECTION: TECHNICAL SKILLS
+Languages & Tools: Python, SQL, etc.
+ML/DL: TensorFlow, PyTorch, etc.
+Other categories as needed
 
-PROFESSIONAL EXPERIENCE
+SECTION: CERTIFICATIONS
+List certifications on one line, separated by semicolons
 
-Job Title | Company Name | City, State | Start - End
-• Achievement bullet point with strong action verb
-• Another achievement bullet point
+SECTION: EXPERIENCE
+JOBTITLE: Job Title | Company Name; Location | Start – End
+BULLET: Achievement with strong action verb and metrics if available
+BULLET: Another achievement bullet point
+BULLET: More achievements
 
-EDUCATION
+JOBTITLE: Previous Job Title | Previous Company; Location | Start – End
+BULLET: Achievement
+BULLET: Achievement
 
-Degree | Institution | Graduation Year
-• Relevant coursework or honors
+SECTION: EDUCATION
+EDUTITLE: Degree Name | Institution Name | Year
+BULLET: Relevant details, honors, or projects
 
-[Include any other sections from original resume]"""
+SECTION: PROFESSIONAL MEMBERSHIP, LEADERSHIP & SERVICE
+BULLET: Membership or leadership item
+BULLET: Another membership item
+
+SECTION: AWARDS
+BULLET: Award name and description (Year)
+BULLET: Another award
+
+Include ALL other sections from original resume using same SECTION: format with BULLET: for items."""
 
     try:
         response = model.generate_content(prompt)
