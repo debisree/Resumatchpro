@@ -415,7 +415,7 @@ def download_tailored_resume_pdf(match_id):
     styles.add(ParagraphStyle(name='ResumeName', parent=styles['Heading1'], fontSize=18, spaceAfter=4, alignment=1))
     styles.add(ParagraphStyle(name='ContactInfo', parent=styles['Normal'], fontSize=10, spaceAfter=12, alignment=1))
     styles.add(ParagraphStyle(name='SectionHeader', parent=styles['Heading2'], fontSize=12, spaceAfter=6, spaceBefore=12, textColor='#1a1a1a'))
-    styles.add(ParagraphStyle(name='BodyText', parent=styles['Normal'], fontSize=10, leading=14))
+    styles.add(ParagraphStyle(name='ResumeBody', parent=styles['Normal'], fontSize=10, leading=14))
     styles.add(ParagraphStyle(name='BulletText', parent=styles['Normal'], fontSize=10, leading=14, leftIndent=20))
     styles.add(ParagraphStyle(name='JobTitle', parent=styles['Normal'], fontSize=10, leading=14, fontName='Helvetica-Bold'))
     
@@ -458,12 +458,12 @@ def download_tailored_resume_pdf(match_id):
             continue
         
         if '|' in line and any(x in line for x in [' - ', '–', 'Present', '20']):
-            story.append(Paragraph(f"<b>{line}</b>", styles['BodyText']))
+            story.append(Paragraph(f"<b>{line}</b>", styles['ResumeBody']))
             continue
         
         clean_line = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', line)
         clean_line = re.sub(r'[#]', '', clean_line)
-        story.append(Paragraph(clean_line, styles['BodyText']))
+        story.append(Paragraph(clean_line, styles['ResumeBody']))
     
     doc.build(story)
     buffer.seek(0)
