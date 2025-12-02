@@ -476,7 +476,7 @@ def generate_pdf_from_json(data):
         link_html.append(f'<a href="{url}" color="#0066cc">Medium</a>')
     if header.get('google_scholar'):
         url = make_url(header['google_scholar'])
-        link_html.append(f'GOOGLE SCHOLAR: <a href="{url}" color="#0066cc">{url}</a>')
+        link_html.append(f'<a href="{url}" color="#0066cc">Google Scholar</a>')
     
     if link_html:
         story.append(Paragraph(' | '.join(link_html), styles['LinksLine']))
@@ -617,7 +617,7 @@ def generate_pdf_from_text(content):
             if part:
                 if 'scholar' in part.lower():
                     url = make_url(part)
-                    link_html.append(f'GOOGLE SCHOLAR: <a href="{url}" color="#0066cc">{url}</a>')
+                    link_html.append(f'<a href="{url}" color="#0066cc">Google Scholar</a>')
                 else:
                     url = make_url(part)
                     display = get_link_display(part)
