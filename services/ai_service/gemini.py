@@ -231,25 +231,34 @@ RULES:
 
 OUTPUT FORMAT - Return TWO sections separated by ===SEPARATOR===:
 
-SECTION 1 - Changes summary for display
+First section: Brief changes summary (2-3 bullet points of what was improved)
 
-SECTION 2 - Full tailored resume in markdown:
-# [Name]
-[Contact info with links]
+===SEPARATOR===
 
-## Professional Summary
-[2-3 sentences]
+Second section: The full tailored resume in PLAIN TEXT format (NO markdown, NO # symbols):
 
-## Skills
-[Categories with skills]
+FULL NAME
+Email: email@example.com | Phone: 123-456-7890 | LinkedIn: linkedin.com/in/name | Location: City, State
 
-## Professional Experience
-[Jobs with bullets]
+PROFESSIONAL SUMMARY
+2-3 sentences summarizing qualifications.
 
-## Education
-[Education]
+SKILLS
+Category1: skill1, skill2, skill3
+Category2: skill1, skill2
 
-[Other sections as needed]"""
+PROFESSIONAL EXPERIENCE
+
+Job Title | Company Name | City, State | Start - End
+• Achievement bullet point with strong action verb
+• Another achievement bullet point
+
+EDUCATION
+
+Degree | Institution | Graduation Year
+• Relevant coursework or honors
+
+[Include any other sections from original resume]"""
 
     try:
         response = model.generate_content(prompt)

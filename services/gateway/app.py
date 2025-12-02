@@ -412,30 +412,58 @@ def download_tailored_resume_pdf(match_id):
     doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=72)
     
     styles = getSampleStyleSheet()
-    styles.add(ParagraphStyle(name='CustomBody', parent=styles['Normal'], fontSize=11, leading=14))
-    styles.add(ParagraphStyle(name='CustomHeading', parent=styles['Heading1'], fontSize=14, spaceAfter=6))
-    styles.add(ParagraphStyle(name='CustomHeading2', parent=styles['Heading2'], fontSize=12, spaceAfter=4))
+    styles.add(ParagraphStyle(name='ResumeName', parent=styles['Heading1'], fontSize=18, spaceAfter=4, alignment=1))
+    styles.add(ParagraphStyle(name='ContactInfo', parent=styles['Normal'], fontSize=10, spaceAfter=12, alignment=1))
+    styles.add(ParagraphStyle(name='SectionHeader', parent=styles['Heading2'], fontSize=12, spaceAfter=6, spaceBefore=12, textColor='#1a1a1a'))
+    styles.add(ParagraphStyle(name='BodyText', parent=styles['Normal'], fontSize=10, leading=14))
+    styles.add(ParagraphStyle(name='BulletText', parent=styles['Normal'], fontSize=10, leading=14, leftIndent=20))
+    styles.add(ParagraphStyle(name='JobTitle', parent=styles['Normal'], fontSize=10, leading=14, fontName='Helvetica-Bold'))
     
     story = []
     lines = match.tailored_resume_content.split('\n')
     
-    for line in lines:
+    section_headers = ['PROFESSIONAL SUMMARY', 'SKILLS', 'PROFESSIONAL EXPERIENCE', 'EXPERIENCE', 
+                       'EDUCATION', 'CERTIFICATIONS', 'PROJECTS', 'AWARDS', 'VOLUNTEERING', 
+                       'LEADERSHIP', 'PUBLICATIONS', 'LANGUAGES', 'INTERESTS']
+    
+    is_first_line = True
+    for i, line in enumerate(lines):
         line = line.strip()
+        
         if not line:
-            story.append(Spacer(1, 6))
-        elif line.startswith('# '):
-            story.append(Paragraph(line[2:], styles['CustomHeading']))
-        elif line.startswith('## '):
-            story.append(Paragraph(line[3:], styles['CustomHeading2']))
-        elif line.startswith('- '):
-            bullet_text = '• ' + line[2:]
-            story.append(Paragraph(bullet_text, styles['CustomBody']))
-        elif line.startswith('**') and line.endswith('**'):
-            story.append(Paragraph(f"<b>{line[2:-2]}</b>", styles['CustomBody']))
-        else:
-            clean_line = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', line)
-            clean_line = re.sub(r'\[(.*?)\]\((.*?)\)', r'<a href="\2">\1</a>', clean_line)
-            story.append(Paragraph(clean_line, styles['CustomBody']))
+            story.append(Spacer(1, 4))
+            continue
+        
+        line_upper = line.upper().strip()
+        if any(line_upper.startswith('SECTION') for _ in [1]):
+            continue
+        
+        if is_first_line and line and not any(line_upper == h for h in section_headers):
+            clean_name = re.sub(r'[#*]', '', line).strip()
+            story.append(Paragraph(clean_name, styles['ResumeName']))
+            is_first_line = False
+            continue
+        
+        if '|' in line and '@' in line or ('|' in line and any(x in line.lower() for x in ['email', 'phone', 'linkedin', 'github'])):
+            story.append(Paragraph(line, styles['ContactInfo']))
+            continue
+        
+        if any(line_upper == h or line_upper.startswith(h + ':') for h in section_headers):
+            story.append(Paragraph(line_upper.replace(':', ''), styles['SectionHeader']))
+            continue
+        
+        if line.startswith('•') or line.startswith('-') or line.startswith('*'):
+            bullet_text = '• ' + line.lstrip('•-* ').strip()
+            story.append(Paragraph(bullet_text, styles['BulletText']))
+            continue
+        
+        if '|' in line and any(x in line for x in [' - ', '–', 'Present', '20']):
+            story.append(Paragraph(f"<b>{line}</b>", styles['BodyText']))
+            continue
+        
+        clean_line = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', line)
+        clean_line = re.sub(r'[#]', '', clean_line)
+        story.append(Paragraph(clean_line, styles['BodyText']))
     
     doc.build(story)
     buffer.seek(0)
@@ -445,12 +473,20 @@ def download_tailored_resume_pdf(match_id):
 
 def extract_name_from_resume(content: str) -> str:
     lines = content.split('\n')
+    section_headers = ['PROFESSIONAL SUMMARY', 'SKILLS', 'EXPERIENCE', 'EDUCATION', 'SECTION']
     for line in lines:
         line = line.strip()
-        if line.startswith('# '):
-            name = line[2:].strip()
-            name = re.sub(r'[^\w\s]', '', name)
-            return name if name else 'User'
+        if not line:
+            continue
+        line_upper = line.upper()
+        if any(line_upper.startswith(h) for h in section_headers):
+            continue
+        if '|' in line or '@' in line:
+            continue
+        name = re.sub(r'[#*]', '', line).strip()
+        name = re.sub(r'[^\w\s]', '', name).strip()
+        if name and len(name) > 2:
+            return name
     return 'User'
 
 
