@@ -22,6 +22,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_LEFT
+from reportlab.lib import colors
 import io
 import re
 
@@ -409,66 +410,157 @@ def download_tailored_resume_pdf(match_id):
     filename = f"{user_name}_tailored_resume.pdf"
     
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=72)
+    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=54, leftMargin=54, topMargin=54, bottomMargin=54)
     
     styles = getSampleStyleSheet()
-    styles.add(ParagraphStyle(name='ResumeName', parent=styles['Heading1'], fontSize=18, spaceAfter=4, alignment=1))
-    styles.add(ParagraphStyle(name='ContactInfo', parent=styles['Normal'], fontSize=10, spaceAfter=12, alignment=1))
-    styles.add(ParagraphStyle(name='SectionHeader', parent=styles['Heading2'], fontSize=12, spaceAfter=6, spaceBefore=12, textColor='#1a1a1a'))
-    styles.add(ParagraphStyle(name='ResumeBody', parent=styles['Normal'], fontSize=10, leading=14))
-    styles.add(ParagraphStyle(name='BulletText', parent=styles['Normal'], fontSize=10, leading=14, leftIndent=20))
-    styles.add(ParagraphStyle(name='JobTitle', parent=styles['Normal'], fontSize=10, leading=14, fontName='Helvetica-Bold'))
+    styles.add(ParagraphStyle(name='ResumeName', fontSize=20, spaceAfter=2, alignment=1, fontName='Helvetica-Bold'))
+    styles.add(ParagraphStyle(name='ContactLine1', fontSize=9, spaceAfter=2, alignment=1, textColor=colors.HexColor('#333333')))
+    styles.add(ParagraphStyle(name='ContactLine2', fontSize=9, spaceAfter=10, alignment=1, textColor=colors.HexColor('#0066cc')))
+    styles.add(ParagraphStyle(name='SectionHeader', fontSize=11, spaceAfter=4, spaceBefore=10, fontName='Helvetica-Bold', textColor=colors.HexColor('#1a1a1a')))
+    styles.add(ParagraphStyle(name='ResumeBody', fontSize=10, leading=13, fontName='Helvetica'))
+    styles.add(ParagraphStyle(name='BulletItem', fontSize=10, leading=13, leftIndent=15, bulletIndent=0, fontName='Helvetica'))
+    styles.add(ParagraphStyle(name='JobTitleLine', fontSize=10, leading=13, fontName='Helvetica-Bold', spaceBefore=6))
     
     story = []
-    lines = match.tailored_resume_content.split('\n')
+    content = match.tailored_resume_content
+    lines = content.split('\n')
     
-    section_headers = ['PROFESSIONAL SUMMARY', 'SKILLS', 'PROFESSIONAL EXPERIENCE', 'EXPERIENCE', 
-                       'EDUCATION', 'CERTIFICATIONS', 'PROJECTS', 'AWARDS', 'VOLUNTEERING', 
-                       'LEADERSHIP', 'PUBLICATIONS', 'LANGUAGES', 'INTERESTS']
+    section_headers = ['PROFESSIONAL SUMMARY', 'SUMMARY', 'SKILLS', 'TECHNICAL SKILLS', 'PROFESSIONAL EXPERIENCE', 
+                       'EXPERIENCE', 'WORK EXPERIENCE', 'EDUCATION', 'CERTIFICATIONS', 'PROJECTS', 
+                       'AWARDS', 'AWARDS AND HONORS', 'VOLUNTEERING', 'VOLUNTEER EXPERIENCE',
+                       'LEADERSHIP', 'PROFESSIONAL MEMBERSHIP', 'PROFESSIONAL MEMBERSHIPS',
+                       'PUBLICATIONS', 'LANGUAGES', 'INTERESTS', 'ADDITIONAL INFORMATION']
     
-    is_first_line = True
+    name_found = False
+    contact_line1_found = False
+    contact_line2_found = False
+    current_section = None
+    
     for i, line in enumerate(lines):
         line = line.strip()
         
         if not line:
-            story.append(Spacer(1, 4))
             continue
         
-        line_upper = line.upper().strip()
-        if any(line_upper.startswith('SECTION') for _ in [1]):
+        line_upper = line.upper()
+        if line_upper.startswith('SECTION') or line_upper.startswith('---'):
             continue
         
-        if is_first_line and line and not any(line_upper == h for h in section_headers):
-            clean_name = re.sub(r'[#*]', '', line).strip()
-            story.append(Paragraph(clean_name, styles['ResumeName']))
-            is_first_line = False
-            continue
+        if not name_found:
+            is_section = any(line_upper == h or line_upper.startswith(h + ':') for h in section_headers)
+            has_contact_info = '@' in line or 'linkedin' in line.lower() or 'github' in line.lower()
+            if not is_section and not has_contact_info and len(line) > 2:
+                clean_name = re.sub(r'[#*\[\]]', '', line).strip()
+                story.append(Paragraph(clean_name, styles['ResumeName']))
+                name_found = True
+                continue
         
-        if '|' in line and '@' in line or ('|' in line and any(x in line.lower() for x in ['email', 'phone', 'linkedin', 'github'])):
-            story.append(Paragraph(line, styles['ContactInfo']))
-            continue
+        if name_found and not contact_line2_found:
+            if '@' in line or 'phone' in line.lower() or any(c.isdigit() for c in line):
+                parts = [p.strip() for p in line.replace('|', ' | ').split('|')]
+                contact_parts = []
+                link_parts = []
+                
+                for part in parts:
+                    part = part.strip()
+                    if not part:
+                        continue
+                    if 'linkedin' in part.lower() or 'github' in part.lower() or 'http' in part.lower() or 'portfolio' in part.lower():
+                        url = extract_url(part)
+                        if url:
+                            display = part.replace(url, '').strip(' []()').strip()
+                            if not display:
+                                display = 'LinkedIn' if 'linkedin' in url.lower() else 'GitHub' if 'github' in url.lower() else 'Portfolio'
+                            link_parts.append(f'<a href="{url}" color="#0066cc">{display}</a>')
+                        else:
+                            link_parts.append(part)
+                    else:
+                        contact_parts.append(part)
+                
+                if contact_parts and not contact_line1_found:
+                    story.append(Paragraph(' | '.join(contact_parts), styles['ContactLine1']))
+                    contact_line1_found = True
+                
+                if link_parts:
+                    story.append(Paragraph(' | '.join(link_parts), styles['ContactLine2']))
+                    contact_line2_found = True
+                elif contact_line1_found and not contact_line2_found:
+                    next_lines = lines[i+1:i+3] if i+1 < len(lines) else []
+                    has_links_next = any('linkedin' in l.lower() or 'github' in l.lower() for l in next_lines)
+                    if not has_links_next:
+                        contact_line2_found = True
+                continue
+            elif 'linkedin' in line.lower() or 'github' in line.lower():
+                parts = [p.strip() for p in line.replace('|', ' | ').split('|')]
+                link_parts = []
+                for part in parts:
+                    part = part.strip()
+                    if not part:
+                        continue
+                    url = extract_url(part)
+                    if url:
+                        display = part.replace(url, '').strip(' []()').strip()
+                        if not display:
+                            display = 'LinkedIn' if 'linkedin' in url.lower() else 'GitHub' if 'github' in url.lower() else 'Portfolio'
+                        link_parts.append(f'<a href="{url}" color="#0066cc">{display}</a>')
+                    else:
+                        link_parts.append(part)
+                if link_parts:
+                    story.append(Paragraph(' | '.join(link_parts), styles['ContactLine2']))
+                contact_line2_found = True
+                continue
         
-        if any(line_upper == h or line_upper.startswith(h + ':') for h in section_headers):
-            story.append(Paragraph(line_upper.replace(':', ''), styles['SectionHeader']))
+        is_section_header = any(line_upper == h or line_upper.startswith(h + ':') or line_upper.rstrip(':') == h for h in section_headers)
+        if is_section_header:
+            clean_header = re.sub(r'[#*:]', '', line).strip().upper()
+            story.append(Paragraph(clean_header, styles['SectionHeader']))
+            current_section = clean_header
             continue
         
         if line.startswith('•') or line.startswith('-') or line.startswith('*'):
-            bullet_text = '• ' + line.lstrip('•-* ').strip()
-            story.append(Paragraph(bullet_text, styles['BulletText']))
+            bullet_text = line.lstrip('•-* ').strip()
+            bullet_text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', bullet_text)
+            story.append(Paragraph(f"• {bullet_text}", styles['BulletItem']))
             continue
         
-        if '|' in line and any(x in line for x in [' - ', '–', 'Present', '20']):
-            story.append(Paragraph(f"<b>{line}</b>", styles['ResumeBody']))
+        is_job_title = ('|' in line and any(x in line for x in [' - ', '–', 'Present', '2019', '2020', '2021', '2022', '2023', '2024', '2025']))
+        if is_job_title:
+            clean_title = re.sub(r'\*\*(.*?)\*\*', r'\1', line)
+            clean_title = re.sub(r'[#]', '', clean_title)
+            story.append(Paragraph(clean_title, styles['JobTitleLine']))
             continue
         
         clean_line = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', line)
         clean_line = re.sub(r'[#]', '', clean_line)
+        
+        url_match = re.search(r'\[(.*?)\]\((.*?)\)', clean_line)
+        if url_match:
+            display_text = url_match.group(1)
+            url = url_match.group(2)
+            clean_line = clean_line.replace(url_match.group(0), f'<a href="{url}" color="#0066cc">{display_text}</a>')
+        
         story.append(Paragraph(clean_line, styles['ResumeBody']))
     
     doc.build(story)
     buffer.seek(0)
     
     return send_file(buffer, as_attachment=True, download_name=filename, mimetype='application/pdf')
+
+
+def extract_url(text):
+    url_patterns = [
+        r'https?://[^\s\)\]]+',
+        r'linkedin\.com/in/[^\s\)\]]+',
+        r'github\.com/[^\s\)\]]+',
+    ]
+    for pattern in url_patterns:
+        match = re.search(pattern, text)
+        if match:
+            url = match.group(0)
+            if not url.startswith('http'):
+                url = 'https://' + url
+            return url
+    return None
 
 
 def extract_name_from_resume(content: str) -> str:
