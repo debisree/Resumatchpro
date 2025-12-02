@@ -1,0 +1,305 @@
+import google.generativeai as genai
+import json
+import os
+from typing import Dict, List, Any
+
+gemini_api_key = os.getenv("GEMINI_API_KEY")
+if gemini_api_key:
+    genai.configure(api_key=gemini_api_key)
+
+model = genai.GenerativeModel('gemini-2.0-flash-exp')
+
+
+def analyze_resume(resume_text: str) -> Dict[str, Any]:
+    prompt = f"""You are a brutally honest resume expert and career coach. Act as a recruiter reviewing this resume - be direct about weaknesses.
+
+RESUME TEXT:
+{resume_text}
+
+Evaluate the resume across these dimensions:
+
+1. COMPLETENESS SCORE (0-100):
+   - Assess how complete and comprehensive the resume is
+   - Consider: contact info, summary/objective, work experience, education, skills, achievements
+   - Provide a numerical score and brutally honest rationale
+
+2. SECTION QUALITY SCORES (0-5 each):
+   - Summary: Quality and impact of professional summary/objective
+   - Education: Completeness and presentation of educational background
+   - Experience: Depth, relevance, and presentation of work history
+   - Other: Projects, volunteering, awards, skills, certifications
+
+3. IMPROVEMENT SUGGESTIONS (BE BRUTALLY HONEST):
+   - Provide 5-8 specific, actionable suggestions
+   - Call out overused buzzwords
+   - Identify vague statements lacking metrics
+   - Flag weak action verbs
+   - Point out where quantifiable results are missing
+   - DO NOT invent or suggest specific numbers
+
+Return ONLY valid JSON with this exact structure:
+{{"completenessScore": 75, "completenessRationale": "...", "sectionScores": {{"summary": 3, "education": 4, "experience": 3, "other": 2}}, "suggestions": ["...", "..."]}}"""
+
+    try:
+        response = model.generate_content(prompt)
+        text = response.text.strip()
+        if text.startswith("```json"):
+            text = text[7:]
+        if text.startswith("```"):
+            text = text[3:]
+        if text.endswith("```"):
+            text = text[:-3]
+        data = json.loads(text.strip())
+        
+        return {
+            "completenessScore": min(100, max(0, data.get("completenessScore", 0))),
+            "completenessRationale": data.get("completenessRationale", "No rationale provided"),
+            "sectionScores": {
+                "summary": min(5, max(0, data.get("sectionScores", {}).get("summary", 0))),
+                "education": min(5, max(0, data.get("sectionScores", {}).get("education", 0))),
+                "experience": min(5, max(0, data.get("sectionScores", {}).get("experience", 0))),
+                "other": min(5, max(0, data.get("sectionScores", {}).get("other", 0))),
+            },
+            "suggestions": data.get("suggestions", [])[:8]
+        }
+    except Exception as e:
+        raise ValueError(f"Failed to analyze resume: {str(e)}")
+
+
+def analyze_job_match(resume_text: str, job_description: str) -> Dict[str, Any]:
+    prompt = f"""You are an expert career coach. Analyze how well this resume aligns with the job description.
+
+RESUME TEXT:
+{resume_text}
+
+JOB DESCRIPTION:
+{job_description}
+
+Provide a comprehensive match analysis with:
+1. ALIGNMENT SCORE (0-100)
+2. GAPS (3-8 items with category, description, severity: high/medium/low)
+3. STRENGTHS (3-6 items)
+4. RECOMMENDATIONS (5-8 items)
+
+Return ONLY valid JSON:
+{{"alignmentScore": 70, "alignmentRationale": "...", "gaps": [{{"category": "...", "description": "...", "severity": "high"}}], "strengths": ["..."], "recommendations": ["..."]}}"""
+
+    try:
+        response = model.generate_content(prompt)
+        text = response.text.strip()
+        if text.startswith("```json"):
+            text = text[7:]
+        if text.startswith("```"):
+            text = text[3:]
+        if text.endswith("```"):
+            text = text[:-3]
+        data = json.loads(text.strip())
+        
+        return {
+            "alignmentScore": min(100, max(0, data.get("alignmentScore", 0))),
+            "alignmentRationale": data.get("alignmentRationale", "No rationale provided"),
+            "gaps": data.get("gaps", [])[:8],
+            "strengths": data.get("strengths", [])[:6],
+            "recommendations": data.get("recommendations", [])[:8]
+        }
+    except Exception as e:
+        raise ValueError(f"Failed to analyze job match: {str(e)}")
+
+
+def generate_job_description(role: str, location: str) -> str:
+    prompt = f"""Generate a realistic job description for a {role} position in {location}.
+
+Include:
+- Company overview (generic tech company)
+- Role responsibilities (5-7 key responsibilities)
+- Required qualifications
+- Preferred qualifications
+- Benefits overview
+
+Respond with just the job description text, no JSON."""
+
+    try:
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        raise ValueError(f"Failed to generate job description: {str(e)}")
+
+
+def generate_final_verdict(
+    resume_text: str,
+    job_description: str,
+    alignment_score: int,
+    gaps: List[Dict[str, str]],
+    gap_responses: List[Dict[str, Any]]
+) -> Dict[str, Any]:
+    gap_details = []
+    for index, gap in enumerate(gaps):
+        response = next((r for r in gap_responses if r.get("gapIndex") == index), None)
+        proficiency = response.get("proficiencyLevel", "not provided") if response else "not provided"
+        gap_details.append(f"{gap['category']} - {gap['description']} (Severity: {gap['severity']}, Proficiency: {proficiency})")
+    
+    prompt = f"""You are an expert career coach. Based on the analysis and user's proficiency responses, provide a final recommendation.
+
+ALIGNMENT SCORE: {alignment_score}%
+
+GAPS AND PROFICIENCY:
+{chr(10).join(gap_details)}
+
+RESUME (excerpt):
+{resume_text[:2000]}
+
+JOB DESCRIPTION (excerpt):
+{job_description[:2000]}
+
+Provide:
+1. A comprehensive final verdict (2-3 paragraphs) - be encouraging!
+2. A boolean recommendation on whether they should apply (true if score >= 50% or has proficiency in gaps)
+
+Return ONLY valid JSON:
+{{"verdict": "...", "shouldApply": true}}"""
+
+    try:
+        response = model.generate_content(prompt)
+        text = response.text.strip()
+        if text.startswith("```json"):
+            text = text[7:]
+        if text.startswith("```"):
+            text = text[3:]
+        if text.endswith("```"):
+            text = text[:-3]
+        data = json.loads(text.strip())
+        
+        return {
+            "verdict": data.get("verdict", "Unable to generate verdict."),
+            "shouldApply": data.get("shouldApply", True)
+        }
+    except Exception as e:
+        raise ValueError(f"Failed to generate verdict: {str(e)}")
+
+
+def generate_tailored_resume(
+    original_resume_text: str,
+    job_description: str,
+    strengths: List[str],
+    gaps: List[Dict[str, str]],
+    gap_responses: List[Dict[str, Any]]
+) -> Dict[str, str]:
+    skills_to_add = []
+    for response in gap_responses:
+        if response.get("proficiencyLevel") in ["basic", "moderate", "advanced"]:
+            gap_idx = response.get("gapIndex", 0)
+            if gap_idx < len(gaps):
+                gap = gaps[gap_idx]
+                skills_to_add.append(f"- {gap['category']}: {response['proficiencyLevel']} proficiency")
+    
+    skills_text = chr(10).join(skills_to_add) if skills_to_add else "None confirmed"
+    
+    prompt = f"""You are an expert resume writer. Create a tailored, ATS-optimized resume.
+
+ORIGINAL RESUME:
+{original_resume_text}
+
+TARGET JOB:
+{job_description[:2000]}
+
+STRENGTHS TO HIGHLIGHT:
+{chr(10).join(f'- {s}' for s in strengths)}
+
+SKILLS USER CONFIRMED:
+{skills_text}
+
+RULES:
+- Transform weak verbs: "responsible for" → "led", "worked on" → "architected"
+- NEVER invent metrics - only use existing numbers
+- Preserve ALL sections (Volunteering, Awards, etc.)
+- Keep ALL contact links
+- Add confirmed skills to Skills section
+
+OUTPUT FORMAT - Return TWO sections separated by ===SEPARATOR===:
+
+SECTION 1 - Changes summary for display
+
+SECTION 2 - Full tailored resume in markdown:
+# [Name]
+[Contact info with links]
+
+## Professional Summary
+[2-3 sentences]
+
+## Skills
+[Categories with skills]
+
+## Professional Experience
+[Jobs with bullets]
+
+## Education
+[Education]
+
+[Other sections as needed]"""
+
+    try:
+        response = model.generate_content(prompt)
+        full_response = response.text
+        
+        separator = "===SEPARATOR==="
+        if separator in full_response:
+            parts = full_response.split(separator)
+            return {
+                "changesSummary": parts[0].strip(),
+                "resumeMarkdown": parts[1].strip() if len(parts) > 1 else full_response
+            }
+        return {
+            "changesSummary": "Resume tailored for target position.",
+            "resumeMarkdown": full_response
+        }
+    except Exception as e:
+        raise ValueError(f"Failed to generate tailored resume: {str(e)}")
+
+
+def generate_career_roadmap(
+    resume_text: str,
+    dream_role: str,
+    dream_location: str,
+    timeframe: str
+) -> Dict[str, Any]:
+    prompt = f"""You are an expert career coach helping someone transition to their dream role.
+
+CURRENT RESUME:
+{resume_text}
+
+CAREER GOAL:
+Dream Role: {dream_role}
+Dream Location: {dream_location}
+Timeframe: {timeframe}
+
+Provide a comprehensive career roadmap:
+
+1. CURRENT GAPS (3-6 items)
+2. SKILLS TO ACQUIRE (5-8 specific skills)
+3. ACTION PLAN (3-4 phases with phase name, duration, and 3-5 actions each)
+4. RESOURCES (4-6 specific recommendations)
+5. MILESTONES (4-6 measurable checkpoints)
+
+Return ONLY valid JSON:
+{{"currentGaps": ["..."], "skillsToAcquire": ["..."], "actionPlan": [{{"phase": "...", "duration": "...", "actions": ["..."]}}], "resources": ["..."], "milestones": ["..."]}}"""
+
+    try:
+        response = model.generate_content(prompt)
+        text = response.text.strip()
+        if text.startswith("```json"):
+            text = text[7:]
+        if text.startswith("```"):
+            text = text[3:]
+        if text.endswith("```"):
+            text = text[:-3]
+        data = json.loads(text.strip())
+        
+        return {
+            "currentGaps": data.get("currentGaps", []),
+            "skillsToAcquire": data.get("skillsToAcquire", []),
+            "actionPlan": data.get("actionPlan", []),
+            "resources": data.get("resources", []),
+            "milestones": data.get("milestones", [])
+        }
+    except Exception as e:
+        raise ValueError(f"Failed to generate career roadmap: {str(e)}")

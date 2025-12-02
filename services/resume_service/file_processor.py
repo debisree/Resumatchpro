@@ -3,10 +3,9 @@ from docx import Document
 import pytesseract
 from PIL import Image
 import io
-from typing import Optional
+
 
 def extract_text_from_pdf(file_content: bytes) -> str:
-    """Extract text from PDF file"""
     try:
         pdf_reader = PdfReader(io.BytesIO(file_content))
         text_parts = []
@@ -18,8 +17,8 @@ def extract_text_from_pdf(file_content: bytes) -> str:
     except Exception as e:
         raise ValueError(f"Failed to extract text from PDF: {str(e)}")
 
+
 def extract_text_from_docx(file_content: bytes) -> str:
-    """Extract text from DOCX file"""
     try:
         doc = Document(io.BytesIO(file_content))
         text_parts = []
@@ -30,8 +29,8 @@ def extract_text_from_docx(file_content: bytes) -> str:
     except Exception as e:
         raise ValueError(f"Failed to extract text from DOCX: {str(e)}")
 
+
 def extract_text_from_image(file_content: bytes) -> str:
-    """Extract text from image using OCR"""
     try:
         image = Image.open(io.BytesIO(file_content))
         text = pytesseract.image_to_string(image)
@@ -39,8 +38,8 @@ def extract_text_from_image(file_content: bytes) -> str:
     except Exception as e:
         raise ValueError(f"Failed to extract text from image: {str(e)}")
 
+
 def extract_text_from_file(file_content: bytes, mime_type: str) -> str:
-    """Extract text from uploaded file based on MIME type"""
     if mime_type == "application/pdf":
         return extract_text_from_pdf(file_content)
     elif mime_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
@@ -51,3 +50,16 @@ def extract_text_from_file(file_content: bytes, mime_type: str) -> str:
         return file_content.decode("utf-8")
     else:
         raise ValueError(f"Unsupported file type: {mime_type}")
+
+
+def get_mime_type(filename: str) -> str:
+    ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+    mime_map = {
+        'pdf': 'application/pdf',
+        'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'png': 'image/png',
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'txt': 'text/plain'
+    }
+    return mime_map.get(ext, 'application/octet-stream')

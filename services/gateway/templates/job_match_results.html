@@ -1,0 +1,225 @@
+{% extends "layout_auth.html" %}
+{% block title %}Job Match Results - ResuMatch Pro{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex items-center gap-4 mb-8">
+        <a href="{{ url_for('job_match') }}" class="text-gray-500 hover:text-gray-700">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+        </a>
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">Job Match Results</h1>
+            {% if match.job_role %}
+            <p class="text-gray-600">{{ match.job_role }} - {{ match.job_location }}</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-4">Alignment Score</h2>
+        <div class="flex items-center gap-6">
+            <div class="relative w-32 h-32">
+                <svg class="w-32 h-32 transform -rotate-90">
+                    <circle cx="64" cy="64" r="56" stroke="#e5e7eb" stroke-width="12" fill="none"/>
+                    <circle cx="64" cy="64" r="56" 
+                            stroke="{% if match.alignment_score >= 70 %}#22c55e{% elif match.alignment_score >= 50 %}#eab308{% else %}#ef4444{% endif %}" 
+                            stroke-width="12" fill="none"
+                            stroke-dasharray="{{ (match.alignment_score / 100) * 351.86 }} 351.86"
+                            stroke-linecap="round"/>
+                </svg>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <span class="text-3xl font-bold" data-testid="text-alignment-score">{{ match.alignment_score }}%</span>
+                </div>
+            </div>
+            <div class="flex-1">
+                <p class="text-gray-700" data-testid="text-alignment-rationale">{{ match.alignment_rationale }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="grid md:grid-cols-2 gap-6 mb-6">
+        <div class="bg-white rounded-xl shadow-md p-6">
+            <h2 class="text-xl font-semibold mb-4 text-green-700">Strengths</h2>
+            <ul class="space-y-2">
+                {% for strength in match.strengths %}
+                <li class="flex items-start gap-2">
+                    <svg class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="text-gray-700" data-testid="text-strength-{{ loop.index }}">{{ strength }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-md p-6">
+            <h2 class="text-xl font-semibold mb-4 text-red-700">Gaps</h2>
+            <ul class="space-y-3">
+                {% for gap in match.gaps %}
+                <li class="p-3 rounded-lg {% if gap.severity == 'high' %}bg-red-50{% elif gap.severity == 'medium' %}bg-yellow-50{% else %}bg-gray-50{% endif %}">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-xs font-medium px-2 py-0.5 rounded-full 
+                            {% if gap.severity == 'high' %}bg-red-200 text-red-700
+                            {% elif gap.severity == 'medium' %}bg-yellow-200 text-yellow-700
+                            {% else %}bg-gray-200 text-gray-700{% endif %}">
+                            {{ gap.severity|upper }}
+                        </span>
+                        <span class="font-medium text-gray-800">{{ gap.category }}</span>
+                    </div>
+                    <p class="text-sm text-gray-600" data-testid="text-gap-{{ loop.index }}">{{ gap.description }}</p>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    
+    {% if not match.final_verdict %}
+    <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-4">Rate Your Proficiency</h2>
+        <p class="text-gray-600 mb-4">Tell us about your experience with each gap area to get a personalized recommendation.</p>
+        
+        <form id="gapForm" class="space-y-4">
+            {% for gap in match.gaps %}
+            <div class="p-4 bg-gray-50 rounded-lg">
+                <p class="font-medium text-gray-800 mb-2">{{ gap.category }}: {{ gap.description }}</p>
+                <div class="flex flex-wrap gap-2">
+                    {% for level in ['none', 'basic', 'moderate', 'advanced'] %}
+                    <label class="cursor-pointer">
+                        <input type="radio" name="gap_{{ loop.index0 }}" value="{{ level }}" class="hidden peer" required
+                               data-testid="radio-gap-{{ loop.index0 }}-{{ level }}">
+                        <span class="inline-block px-4 py-2 rounded-lg border-2 border-gray-300 peer-checked:border-primary-600 peer-checked:bg-primary-50 peer-checked:text-primary-700 hover:border-primary-400 transition">
+                            {{ level|capitalize }}
+                        </span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+            
+            <button type="submit" 
+                    class="w-full py-3 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition"
+                    data-testid="button-submit-gaps">
+                Get Final Verdict
+            </button>
+        </form>
+    </div>
+    {% else %}
+    <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-4">Final Verdict</h2>
+        <div class="p-4 rounded-lg {% if match.should_apply %}bg-green-50 border border-green-200{% else %}bg-yellow-50 border border-yellow-200{% endif %} mb-4">
+            <div class="flex items-center gap-2 mb-2">
+                {% if match.should_apply %}
+                <svg class="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+                <span class="font-semibold text-green-700">We recommend you apply!</span>
+                {% else %}
+                <svg class="w-6 h-6 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+                <span class="font-semibold text-yellow-700">Consider gaining more experience first</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="prose max-w-none text-gray-700" data-testid="text-final-verdict">
+            {{ match.final_verdict|safe }}
+        </div>
+    </div>
+    
+    {% if not match.tailored_resume_content %}
+    <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-4">Generate Tailored Resume</h2>
+        <p class="text-gray-600 mb-4">Create an ATS-optimized resume tailored for this specific job.</p>
+        <button onclick="generateTailoredResume()" 
+                class="w-full py-3 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition"
+                id="generateBtn"
+                data-testid="button-generate-resume">
+            Generate Tailored Resume
+        </button>
+    </div>
+    {% else %}
+    <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-4">Tailored Resume Ready</h2>
+        <div class="mb-4">
+            <h3 class="font-medium text-gray-700 mb-2">Changes Made:</h3>
+            <div class="p-4 bg-gray-50 rounded-lg text-sm text-gray-600 prose max-w-none" data-testid="text-changes-summary">
+                {{ match.changes_summary|safe }}
+            </div>
+        </div>
+        <a href="{{ url_for('download_tailored_resume_pdf', match_id=match.id) }}" 
+           class="block w-full py-3 px-4 bg-green-600 text-white text-center font-medium rounded-lg hover:bg-green-700 transition"
+           data-testid="button-download-pdf">
+            Download PDF
+        </a>
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+
+<script>
+document.getElementById('gapForm')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const gapResponses = [];
+    
+    for (let i = 0; i < {{ match.gaps|length }}; i++) {
+        const value = formData.get('gap_' + i);
+        if (value) {
+            gapResponses.push({
+                gapIndex: i,
+                proficiencyLevel: value
+            });
+        }
+    }
+    
+    try {
+        const response = await fetch('/job-match/{{ match.id }}/submit-gaps', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ gapResponses })
+        });
+        
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            const data = await response.json();
+            alert('Error: ' + (data.error || 'Failed to submit'));
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+});
+
+async function generateTailoredResume() {
+    const btn = document.getElementById('generateBtn');
+    btn.disabled = true;
+    btn.textContent = 'Generating...';
+    
+    try {
+        const response = await fetch('/job-match/{{ match.id }}/generate-resume', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            const data = await response.json();
+            alert('Error: ' + (data.error || 'Failed to generate'));
+            btn.disabled = false;
+            btn.textContent = 'Generate Tailored Resume';
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+        btn.disabled = false;
+        btn.textContent = 'Generate Tailored Resume';
+    }
+}
+</script>
+{% endblock %}

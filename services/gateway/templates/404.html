@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Page Not Found - ResuMatch Pro{% endblock %}
+{% block body %}
+<div class="min-h-screen bg-gradient-to-br from-primary-50 to-blue-100 flex items-center justify-center px-4">
+    <div class="max-w-md w-full text-center">
+        <div class="text-8xl font-bold text-primary-600 mb-4">404</div>
+        <h1 class="text-2xl font-semibold text-gray-800 mb-2">Page Not Found</h1>
+        <p class="text-gray-600 mb-8">The page you're looking for doesn't exist or has been moved.</p>
+        <a href="{{ url_for('index') }}" 
+           class="inline-block py-3 px-6 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition"
+           data-testid="button-home">
+            Go Home
+        </a>
+    </div>
+</div>
+{% endblock %}

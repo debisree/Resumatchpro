@@ -1,10 +1,9 @@
+// This file spawns the Python Flask application
+// The Flask app is located in services/gateway/app.py
 import { spawn } from 'child_process';
-import path from 'path';
+import { resolve } from 'path';
 
-// ResuMatch Pro Flask Microservices Application
-// This starts the Python Flask application instead of Node.js Express
-
-console.log('Starting ResuMatch Pro Flask application...');
+console.log('Starting Python Flask application...');
 
 const pythonProcess = spawn('python', ['run.py'], {
   cwd: process.cwd(),
