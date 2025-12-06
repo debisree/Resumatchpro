@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
 """
-ResuMatch Pro - Flask Microservices Application
-Run with: python run.py
+ResuMatch Pro - Simplified Flask Application
+Run with: python run.py or python app.py
 """
 import os
-import sys
 
-# Add services to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'services'))
-
-from gateway.app import app
+from app import app
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
