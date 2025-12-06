@@ -1,0 +1,89 @@
+{% extends "layout_auth.html" %}
+{% block title %}Resume Analysis - ResuMatch Pro{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex items-center gap-4 mb-8">
+        <a href="{{ url_for('dashboard') }}" class="text-gray-500 hover:text-gray-700">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+        </a>
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">Resume Analysis</h1>
+            <p class="text-gray-600">{{ resume.filename }}</p>
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-4">Completeness Score</h2>
+        <div class="flex items-center gap-6">
+            <div class="relative w-32 h-32">
+                <svg class="w-32 h-32 transform -rotate-90">
+                    <circle cx="64" cy="64" r="56" stroke="#e5e7eb" stroke-width="12" fill="none"/>
+                    <circle cx="64" cy="64" r="56" 
+                            stroke="{% if analysis.completeness_score >= 70 %}#22c55e{% elif analysis.completeness_score >= 50 %}#eab308{% else %}#ef4444{% endif %}" 
+                            stroke-width="12" fill="none"
+                            stroke-dasharray="{{ (analysis.completeness_score / 100) * 351.86 }} 351.86"
+                            stroke-linecap="round"/>
+                </svg>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <span class="text-3xl font-bold" data-testid="text-score">{{ analysis.completeness_score }}%</span>
+                </div>
+            </div>
+            <div class="flex-1">
+                <p class="text-gray-700" data-testid="text-rationale">{{ analysis.completeness_rationale }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-4">Section Scores</h2>
+        <div class="grid md:grid-cols-2 gap-4">
+            {% set sections = [
+                ('Summary', analysis.section_scores.summary, 'bg-blue-500'),
+                ('Education', analysis.section_scores.education, 'bg-green-500'),
+                ('Experience', analysis.section_scores.experience, 'bg-purple-500'),
+                ('Other', analysis.section_scores.other, 'bg-orange-500')
+            ] %}
+            {% for name, score, color in sections %}
+            <div class="p-4 bg-gray-50 rounded-lg">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="font-medium text-gray-700">{{ name }}</span>
+                    <span class="text-sm text-gray-500" data-testid="text-section-{{ name|lower }}">{{ score }}/5</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div class="{{ color }} h-2 rounded-full" style="width: {{ (score / 5) * 100 }}%"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-xl shadow-md p-6">
+        <h2 class="text-xl font-semibold mb-4">Improvement Suggestions</h2>
+        <ul class="space-y-3">
+            {% for suggestion in analysis.suggestions %}
+            <li class="flex items-start gap-3">
+                <svg class="w-5 h-5 text-primary-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <span class="text-gray-700" data-testid="text-suggestion-{{ loop.index }}">{{ suggestion }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    
+    <div class="mt-8 flex gap-4">
+        <a href="{{ url_for('job_match') }}" 
+           class="flex-1 py-3 px-4 bg-primary-600 text-white text-center font-medium rounded-lg hover:bg-primary-700 transition"
+           data-testid="button-job-match">
+            Match Against Jobs
+        </a>
+        <a href="{{ url_for('career_roadmap') }}" 
+           class="flex-1 py-3 px-4 border-2 border-primary-600 text-primary-600 text-center font-medium rounded-lg hover:bg-primary-50 transition"
+           data-testid="button-career-roadmap">
+            Plan Career Roadmap
+        </a>
+    </div>
+</div>
+{% endblock %}

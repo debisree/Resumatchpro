@@ -1,0 +1,44 @@
+You are a senior full-stack engineer. Build a minimal, production-ready MVP web app called **ResuMatch Pro**: an expert resume analyzer and job-fit tailor.
+
+### Tech stack (opinionated)
+- Backend: Python 3 + FastAPI
+- Frontend: Jinja2 templates + HTMX for progressive enhancement + TailwindCSS (CDN)
+- Auth: lightweight username-only login (no password yet)
+- Storage: SQLite for users/sessions + local /uploads for files
+- File handling: accept PDF, DOC/DOCX, PNG/JPG (with OCR)
+- OCR/Parsing libs: pypdf or pdfplumber, python-docx (docx2txt fallback), pytesseract + pillow for images
+- AI: Google Gemini via `google-generativeai` (env var `GEMINI_API_KEY`, default model `gemini-1.5-flash`)
+
+### App goals (user flow)
+1) **Landing/Login (`/`)**
+   - Simple form: “Enter your name” → button [Continue]
+   - On submit, create a user row (if not exists), set session cookie, redirect to `/dashboard`.
+   - No password for now (we’ll add later). Show a tiny disclaimer: “Demo login (no password). Do not upload sensitive info.”
+
+2) **Dashboard / Resume Upload (`/dashboard`)**
+   - Card: “Upload your resume (PDF, DOC/DOCX, PNG/JPG).”
+   - On upload, parse the file:
+     - If DOCX: parse with `python-docx` or `docx2txt`.
+     - If PDF: extract text via `pdfplumber`; basic layout preservation (newlines).
+     - If image: OCR via `pytesseract` to text.
+   - Store original file and extracted plaintext in DB linked to the user.
+   - Buttons:
+     - [Analyze with Gemini] → POST to `/analyze` (uses extracted text)
+     - If no resume uploaded, disable the button with tooltip.
+
+3) **AI Resume Analysis (`/analyze`)**
+   - Call Gemini with a structured system prompt (below) to evaluate:
+     - (A) **Completeness**: 0–100 score + rationale.
+     - (B) **Section quality** (0–5 each) for:
+       - Summary
+       - Education
+       - Experience
+       - Other (projects/volunteering/awards/skills)
+     - (C) **Gaps & suggestions**: bullet list, max 8 items, actionable and specific.
+   - Render a results dashboard:
+     - Big dial for completeness (0–100).
+     - A small table for section scores with labels: Missing/Weak/Fair/Strong/Perfect mapped from 0–5.
+     - Bulleted “Top improvement suggestions.”
+   - Save the structured JSON response in DB.
+
+   **Gemini prompt for analysis (send as system + user content):**
