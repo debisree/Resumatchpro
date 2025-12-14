@@ -7,7 +7,7 @@
     
     <div class="bg-white rounded-xl shadow-md p-6 mb-8">
         <h2 class="text-xl font-semibold mb-4">Upload Resume</h2>
-        <form action="{{ url_for('upload_resume') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+        <form action="{{ url_for('upload_resume') }}" method="POST" enctype="multipart/form-data" class="space-y-4" id="uploadForm">
             <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary-400 transition">
                 <input type="file" name="file" id="file" accept=".pdf,.docx,.png,.jpg,.jpeg,.txt" required
                        class="hidden" onchange="updateFileName(this)"
@@ -21,10 +21,14 @@
                     <p id="fileName" class="mt-2 text-primary-600 font-medium"></p>
                 </label>
             </div>
-            <button type="submit" 
-                    class="w-full py-3 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition"
+            <button type="submit" id="uploadBtn"
+                    class="w-full py-3 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition flex items-center justify-center gap-2"
                     data-testid="button-upload">
-                Upload Resume
+                <span id="uploadBtnText">Upload Resume</span>
+                <svg id="uploadSpinner" class="hidden animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
             </button>
         </form>
     </div>
@@ -53,9 +57,15 @@
             </a>
             {% else %}
             <a href="{{ url_for('analyze_resume_route', resume_id=latest_resume.id) }}" 
-               class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
-               data-testid="button-analyze">
-                Analyze Resume
+               class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition flex items-center gap-2"
+               data-testid="button-analyze"
+               id="analyzeBtn"
+               onclick="showAnalyzeLoading(event)">
+                <span id="analyzeBtnText">Analyze Resume</span>
+                <svg id="analyzeSpinner" class="hidden animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
             </a>
             {% endif %}
         </div>
@@ -85,12 +95,57 @@
     </div>
 </div>
 
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-8 max-w-sm mx-4 text-center shadow-2xl">
+        <div class="animate-spin rounded-full h-16 w-16 border-4 border-primary-200 border-t-primary-600 mx-auto mb-4"></div>
+        <h3 class="text-xl font-semibold text-gray-800 mb-2" id="loadingTitle">Processing</h3>
+        <p class="text-gray-600" id="loadingMessage">Please wait...</p>
+        <p class="text-sm text-gray-400 mt-4">This may take a few seconds</p>
+    </div>
+</div>
+
 <script>
 function updateFileName(input) {
     const fileName = document.getElementById('fileName');
     if (input.files && input.files[0]) {
         fileName.textContent = 'Selected: ' + input.files[0].name;
     }
+}
+
+document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    const btn = document.getElementById('uploadBtn');
+    const btnText = document.getElementById('uploadBtnText');
+    const btnSpinner = document.getElementById('uploadSpinner');
+    const overlay = document.getElementById('loadingOverlay');
+    const loadingTitle = document.getElementById('loadingTitle');
+    const loadingMessage = document.getElementById('loadingMessage');
+    
+    btn.disabled = true;
+    btn.classList.add('opacity-75', 'cursor-not-allowed');
+    btnText.textContent = 'Uploading...';
+    btnSpinner.classList.remove('hidden');
+    
+    loadingTitle.textContent = 'Uploading Resume';
+    loadingMessage.textContent = 'Extracting text from your document...';
+    overlay.classList.remove('hidden');
+});
+
+function showAnalyzeLoading(event) {
+    const btn = document.getElementById('analyzeBtn');
+    const btnText = document.getElementById('analyzeBtnText');
+    const btnSpinner = document.getElementById('analyzeSpinner');
+    const overlay = document.getElementById('loadingOverlay');
+    const loadingTitle = document.getElementById('loadingTitle');
+    const loadingMessage = document.getElementById('loadingMessage');
+    
+    btn.classList.add('opacity-75', 'cursor-not-allowed', 'pointer-events-none');
+    btnText.textContent = 'Analyzing...';
+    btnSpinner.classList.remove('hidden');
+    
+    loadingTitle.textContent = 'Analyzing Resume';
+    loadingMessage.textContent = 'Our AI is reviewing your resume and generating insights...';
+    overlay.classList.remove('hidden');
 }
 </script>
 {% endblock %}
