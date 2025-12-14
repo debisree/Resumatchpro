@@ -173,16 +173,6 @@
     {% endif %}
 </div>
 
-<!-- Loading Overlay -->
-<div id="loadingOverlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white rounded-xl p-8 max-w-sm mx-4 text-center shadow-2xl">
-        <div class="animate-spin rounded-full h-16 w-16 border-4 border-primary-200 border-t-primary-600 mx-auto mb-4"></div>
-        <h3 class="text-xl font-semibold text-gray-800 mb-2" id="loadingTitle">Processing</h3>
-        <p class="text-gray-600" id="loadingMessage">Please wait...</p>
-        <p class="text-sm text-gray-400 mt-4">This may take 15-30 seconds</p>
-    </div>
-</div>
-
 <script>
 document.getElementById('gapForm')?.addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -190,18 +180,11 @@ document.getElementById('gapForm')?.addEventListener('submit', async function(e)
     const btn = document.getElementById('verdictBtn');
     const btnText = document.getElementById('verdictBtnText');
     const btnSpinner = document.getElementById('verdictSpinner');
-    const overlay = document.getElementById('loadingOverlay');
-    const loadingTitle = document.getElementById('loadingTitle');
-    const loadingMessage = document.getElementById('loadingMessage');
     
     btn.disabled = true;
     btn.classList.add('opacity-75', 'cursor-not-allowed');
     btnText.textContent = 'Analyzing...';
     btnSpinner.classList.remove('hidden');
-    
-    loadingTitle.textContent = 'Generating Final Verdict';
-    loadingMessage.textContent = 'Our AI is analyzing your proficiency levels to provide a recommendation...';
-    overlay.classList.remove('hidden');
     
     const formData = new FormData(this);
     const gapResponses = [];
@@ -234,7 +217,6 @@ document.getElementById('gapForm')?.addEventListener('submit', async function(e)
             btn.classList.remove('opacity-75', 'cursor-not-allowed');
             btnText.textContent = 'Get Final Verdict';
             btnSpinner.classList.add('hidden');
-            overlay.classList.add('hidden');
         }
     } catch (error) {
         alert('Error: ' + error.message);
@@ -242,7 +224,6 @@ document.getElementById('gapForm')?.addEventListener('submit', async function(e)
         btn.classList.remove('opacity-75', 'cursor-not-allowed');
         btnText.textContent = 'Get Final Verdict';
         btnSpinner.classList.add('hidden');
-        overlay.classList.add('hidden');
     }
 });
 
@@ -250,18 +231,11 @@ async function generateTailoredResume() {
     const btn = document.getElementById('generateBtn');
     const btnText = document.getElementById('generateBtnText');
     const btnSpinner = document.getElementById('generateSpinner');
-    const overlay = document.getElementById('loadingOverlay');
-    const loadingTitle = document.getElementById('loadingTitle');
-    const loadingMessage = document.getElementById('loadingMessage');
     
     btn.disabled = true;
     btn.classList.add('opacity-75', 'cursor-not-allowed');
     btnText.textContent = 'Generating...';
     btnSpinner.classList.remove('hidden');
-    
-    loadingTitle.textContent = 'Generating Tailored Resume';
-    loadingMessage.textContent = 'Our AI is optimizing your resume for this specific job...';
-    overlay.classList.remove('hidden');
     
     try {
         const response = await fetch('/job-match/{{ match.id }}/generate-resume', {
@@ -281,7 +255,6 @@ async function generateTailoredResume() {
             btnText.textContent = 'Generate Tailored Resume';
             btnSpinner.classList.add('hidden');
             btn.classList.remove('opacity-75', 'cursor-not-allowed');
-            overlay.classList.add('hidden');
         }
     } catch (error) {
         alert('Error: ' + error.message);
@@ -289,7 +262,6 @@ async function generateTailoredResume() {
         btnText.textContent = 'Generate Tailored Resume';
         btnSpinner.classList.add('hidden');
         btn.classList.remove('opacity-75', 'cursor-not-allowed');
-        overlay.classList.add('hidden');
     }
 }
 </script>
