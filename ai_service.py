@@ -279,8 +279,141 @@ Return ONLY valid JSON:
         raise ValueError(f"Failed to analyze resume: {str(e)}")
 
 
+def extract_job_keywords(job_description: str) -> Dict[str, List[str]]:
+    """
+    Extract important keywords and requirements from job description.
+    Returns categorized keywords for matching analysis.
+    """
+    text_lower = job_description.lower()
+    
+    tech_skills = []
+    soft_skills = []
+    requirements = []
+    tools = []
+    
+    common_tech = [
+        "python", "java", "javascript", "typescript", "c++", "c#", "ruby", "go", "rust", "scala",
+        "sql", "nosql", "mongodb", "postgresql", "mysql", "redis", "elasticsearch",
+        "aws", "azure", "gcp", "docker", "kubernetes", "terraform", "ansible",
+        "react", "angular", "vue", "node.js", "django", "flask", "spring",
+        "machine learning", "deep learning", "nlp", "computer vision", "ai",
+        "tensorflow", "pytorch", "scikit-learn", "pandas", "numpy",
+        "git", "ci/cd", "jenkins", "github actions", "gitlab",
+        "rest api", "graphql", "microservices", "agile", "scrum",
+        "data analysis", "data science", "data engineering", "etl",
+        "linux", "unix", "bash", "shell scripting"
+    ]
+    
+    for skill in common_tech:
+        if skill in text_lower:
+            tech_skills.append(skill)
+    
+    common_soft = [
+        "communication", "leadership", "teamwork", "problem-solving", "analytical",
+        "collaboration", "project management", "time management", "critical thinking",
+        "attention to detail", "creativity", "adaptability", "mentoring"
+    ]
+    
+    for skill in common_soft:
+        if skill in text_lower:
+            soft_skills.append(skill)
+    
+    experience_patterns = [
+        r'(\d+)\+?\s*years?\s+(?:of\s+)?experience',
+        r'(\d+)\+?\s*years?\s+(?:in|with)',
+        r'minimum\s+(\d+)\s+years?',
+        r'at\s+least\s+(\d+)\s+years?'
+    ]
+    for pattern in experience_patterns:
+        matches = re.findall(pattern, text_lower)
+        for match in matches:
+            requirements.append(f"{match}+ years experience")
+    
+    degree_patterns = ["bachelor", "master", "phd", "ph.d", "doctorate", "mba", "bs", "ms", "b.s.", "m.s."]
+    for degree in degree_patterns:
+        if degree in text_lower:
+            requirements.append(f"{degree} degree")
+    
+    return {
+        "tech_skills": list(set(tech_skills)),
+        "soft_skills": list(set(soft_skills)),
+        "requirements": list(set(requirements)),
+        "tools": list(set(tools))
+    }
+
+
+def keyword_match_analysis(resume_text: str, job_keywords: Dict[str, List[str]]) -> Dict[str, Any]:
+    """
+    Check how many job keywords are present in the resume.
+    Returns match statistics and missing keywords.
+    """
+    resume_lower = resume_text.lower()
+    
+    results = {
+        "tech_skills": {"matched": [], "missing": []},
+        "soft_skills": {"matched": [], "missing": []},
+        "requirements": {"matched": [], "missing": []},
+        "overall_match_rate": 0,
+        "total_keywords": 0,
+        "matched_count": 0
+    }
+    
+    total = 0
+    matched = 0
+    
+    for skill in job_keywords.get("tech_skills", []):
+        total += 1
+        if skill in resume_lower:
+            results["tech_skills"]["matched"].append(skill)
+            matched += 1
+        else:
+            results["tech_skills"]["missing"].append(skill)
+    
+    for skill in job_keywords.get("soft_skills", []):
+        total += 1
+        if skill in resume_lower:
+            results["soft_skills"]["matched"].append(skill)
+            matched += 1
+        else:
+            results["soft_skills"]["missing"].append(skill)
+    
+    for req in job_keywords.get("requirements", []):
+        total += 1
+        req_parts = req.lower().split()
+        if any(part in resume_lower for part in req_parts if len(part) > 3):
+            results["requirements"]["matched"].append(req)
+            matched += 1
+        else:
+            results["requirements"]["missing"].append(req)
+    
+    results["total_keywords"] = total
+    results["matched_count"] = matched
+    results["overall_match_rate"] = int((matched / total * 100) if total > 0 else 0)
+    
+    return results
+
+
 def analyze_job_match(resume_text: str, job_description: str) -> Dict[str, Any]:
-    prompt = f"""You are an expert career coach. Analyze how well this resume aligns with the job description.
+    job_keywords = extract_job_keywords(job_description)
+    keyword_results = keyword_match_analysis(resume_text, job_keywords)
+    
+    keyword_summary = f"""
+KEYWORD ANALYSIS (objective detection):
+- Technical Skills Found: {len(keyword_results['tech_skills']['matched'])} of {len(job_keywords['tech_skills'])}
+  - Matched: {', '.join(keyword_results['tech_skills']['matched']) if keyword_results['tech_skills']['matched'] else 'None'}
+  - Missing: {', '.join(keyword_results['tech_skills']['missing']) if keyword_results['tech_skills']['missing'] else 'None'}
+- Soft Skills Found: {len(keyword_results['soft_skills']['matched'])} of {len(job_keywords['soft_skills'])}
+  - Matched: {', '.join(keyword_results['soft_skills']['matched']) if keyword_results['soft_skills']['matched'] else 'None'}
+  - Missing: {', '.join(keyword_results['soft_skills']['missing']) if keyword_results['soft_skills']['missing'] else 'None'}
+- Requirements: {len(keyword_results['requirements']['matched'])} of {len(job_keywords['requirements'])}
+  - Matched: {', '.join(keyword_results['requirements']['matched']) if keyword_results['requirements']['matched'] else 'None'}
+  - Missing: {', '.join(keyword_results['requirements']['missing']) if keyword_results['requirements']['missing'] else 'None'}
+- Overall Keyword Match Rate: {keyword_results['overall_match_rate']}%
+"""
+    
+    prompt = f"""You are a senior technical recruiter and career coach. Analyze how well this resume aligns with the job description using BOTH semantic understanding AND the keyword analysis provided.
+
+{keyword_summary}
 
 RESUME TEXT:
 {resume_text}
@@ -288,26 +421,45 @@ RESUME TEXT:
 JOB DESCRIPTION:
 {job_description}
 
-Provide a comprehensive match analysis with:
-1. ALIGNMENT SCORE (0-100)
-2. GAPS (3-8 items with category, description, severity: high/medium/low)
-3. STRENGTHS (3-6 items)
-4. RECOMMENDATIONS (5-8 items)
+SCORING GUIDELINES - Use the FULL range based on actual fit:
+- 90-100: Exceptional match - meets/exceeds all requirements, has all key skills, strong relevant experience
+- 80-89: Strong match - meets most requirements, has most key skills, good relevant experience
+- 70-79: Good match - meets core requirements but missing some preferred skills
+- 60-69: Moderate match - meets some requirements, has transferable skills, needs upskilling
+- 50-59: Partial match - has foundational skills but significant gaps exist
+- 40-49: Weak match - limited overlap, would need substantial development
+- 0-39: Poor match - candidate lacks most required qualifications
+
+ANALYSIS REQUIREMENTS:
+1. ALIGNMENT SCORE: Consider both keyword matches AND semantic fit (years experience, domain knowledge, career trajectory)
+2. GAPS: Identify 3-8 specific gaps with severity levels
+   - HIGH: Missing must-have requirements or core technical skills
+   - MEDIUM: Missing preferred qualifications or secondary skills  
+   - LOW: Minor gaps or nice-to-have skills not present
+3. STRENGTHS: 3-6 specific areas where resume strongly matches job
+4. RECOMMENDATIONS: 5-8 actionable steps to improve candidacy
 
 Return ONLY valid JSON:
-{{"alignmentScore": 70, "alignmentRationale": "...", "gaps": [{{"category": "...", "description": "...", "severity": "high"}}], "strengths": ["..."], "recommendations": ["..."]}}"""
+{{"alignmentScore": <your_score>, "alignmentRationale": "...", "gaps": [{{"category": "...", "description": "...", "severity": "high|medium|low"}}], "strengths": ["..."], "recommendations": ["..."]}}"""
 
     try:
         response = model.generate_content(prompt)
         text = clean_json_response(response.text)
         data = json.loads(text)
         
+        ai_score = min(100, max(0, data.get("alignmentScore", 0)))
+        keyword_score = keyword_results["overall_match_rate"]
+        
+        combined_score = int((keyword_score * 0.3) + (ai_score * 0.7))
+        combined_score = max(0, min(100, combined_score))
+        
         return {
-            "alignmentScore": min(100, max(0, data.get("alignmentScore", 0))),
+            "alignmentScore": combined_score,
             "alignmentRationale": data.get("alignmentRationale", "No rationale provided"),
             "gaps": data.get("gaps", [])[:8],
             "strengths": data.get("strengths", [])[:6],
-            "recommendations": data.get("recommendations", [])[:8]
+            "recommendations": data.get("recommendations", [])[:8],
+            "keywordAnalysis": keyword_results
         }
     except Exception as e:
         raise ValueError(f"Failed to analyze job match: {str(e)}")

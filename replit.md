@@ -108,17 +108,20 @@ resumatch-pro/
 5. Gemini processes text and returns structured JSON
 6. Results stored and displayed to user
 
-**Job Matching Data Flow** (Interactive Two-Step Process):
+**Job Matching Data Flow** (Hybrid Keyword + AI Analysis):
 1. User provides either custom job description OR selects role + location from curated lists
 2. If role+location selected, Gemini generates a tailored job description
 3. User's most recent resume text is retrieved
-4. Gemini analyzes resume against job requirements using semantic matching
-5. AI returns alignment score (0-100%), strengths, categorized gaps (with severity levels)
-6. Initial results stored in database
-7. **Interactive Gap Assessment**: User provides proficiency level (None/Basic/Moderate/Advanced) for each identified gap
-8. Gemini generates final verdict based on gap responses
-9. **Tailored Resume Generation** (Optional): User can request AI-generated tailored resume optimized for ATS
-10. Resume downloaded as PDF via server-side ReportLab generation
+4. **Keyword extraction**: System identifies tech skills, soft skills, and requirements from job description
+5. **Keyword matching**: Resume is checked for presence of extracted keywords
+6. Gemini analyzes resume against job requirements using semantic understanding + keyword findings
+7. **Combined scoring**: Final alignment score = 30% keyword match + 70% AI semantic analysis
+8. AI returns alignment score (0-100% using full range), strengths, categorized gaps (with HIGH/MEDIUM/LOW severity)
+9. Initial results stored in database
+10. **Interactive Gap Assessment**: User provides proficiency level (None/Basic/Moderate/Advanced) for each identified gap
+11. Gemini generates final verdict based on gap responses
+12. **Tailored Resume Generation** (Optional): User can request AI-generated tailored resume optimized for ATS
+13. Resume downloaded as PDF via server-side ReportLab generation
 
 **Career Roadmap Data Flow**:
 1. User fills in dream role, dream location, and selects timeframe (6 months to 2 years)
