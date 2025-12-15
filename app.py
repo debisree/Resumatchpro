@@ -190,6 +190,32 @@ def upload_resume():
         return redirect(url_for('home'))
 
 
+@app.route('/resume/<resume_id>/delete', methods=['POST'])
+@login_required
+def delete_resume(resume_id):
+    user = get_current_user()
+    resume = Resume.query.filter_by(id=resume_id, user_id=user.id).first()
+    
+    if not resume:
+        flash('Resume not found.', 'error')
+        return redirect(url_for('home'))
+    
+    try:
+        Analysis.query.filter_by(resume_id=resume_id).delete()
+        JobMatch.query.filter_by(resume_id=resume_id).delete()
+        CareerRoadmap.query.filter_by(resume_id=resume_id).delete()
+        
+        db.session.delete(resume)
+        db.session.commit()
+        
+        flash('Resume deleted successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting resume: {str(e)}', 'error')
+    
+    return redirect(url_for('home'))
+
+
 @app.route('/analyze-resume/<resume_id>')
 @login_required
 def analyze_resume_route(resume_id):
