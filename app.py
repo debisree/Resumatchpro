@@ -28,7 +28,16 @@ from reportlab.lib import colors
 def create_app():
     app = Flask(__name__, template_folder='templates', static_folder='static')
     app.config['SECRET_KEY'] = Config.SECRET_KEY
-    app.config['SQLALCHEMY_DATABASE_URI'] = Config.DATABASE_URL
+    
+    # Ensure DATABASE_URL is set
+    if not hasattr(Config, 'DATABASE_URL') or not Config.DATABASE_URL:
+        # Final fallback if somehow DATABASE_URL is still not set
+        db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resumatch.db')
+        app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_path}"
+        print(f"CRITICAL: DATABASE_URL was not set. Using fallback SQLite at: {db_path}")
+    else:
+        app.config['SQLALCHEMY_DATABASE_URI'] = Config.DATABASE_URL
+    
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['MAX_CONTENT_LENGTH'] = Config.MAX_UPLOAD_SIZE
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
