@@ -76,25 +76,22 @@
     
     {% if not match.final_verdict %}
     <div class="bg-white rounded-xl shadow-md p-6 mb-6">
-        <h2 class="text-xl font-semibold mb-4">Rate Your Proficiency</h2>
-        <p class="text-gray-600 mb-4">Tell us about your experience with each gap area to get a personalized recommendation.</p>
+        <h2 class="text-xl font-semibold mb-4">Tell Us About Your Experience</h2>
+        <p class="text-gray-600 mb-4">Describe your experience with each gap area in your own words. This helps us better understand your background and provide more accurate recommendations.</p>
         
         <form id="gapForm" class="space-y-4" novalidate>
             {% for gap in match.gaps %}
             <div class="p-4 bg-gray-50 rounded-lg">
-                <p class="font-medium text-gray-800 mb-2">{{ gap.category }}: {{ gap.description }}</p>
-                <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="{{ gap.category }}">
-                    {% for level in ['none', 'basic', 'moderate', 'advanced'] %}
-                    <label class="cursor-pointer">
-                        <input type="radio" name="gap_{{ loop.index0 }}" value="{{ level }}" 
-                               class="sr-only peer"
-                               data-testid="radio-gap-{{ loop.index0 }}-{{ level }}">
-                        <span class="inline-block px-4 py-2 rounded-lg border-2 border-gray-300 peer-checked:border-primary-600 peer-checked:bg-primary-50 peer-checked:text-primary-700 hover:border-primary-400 transition">
-                            {{ level|capitalize }}
-                        </span>
-                    </label>
-                    {% endfor %}
-                </div>
+                <label class="block font-medium text-gray-800 mb-2" for="gap_{{ loop.index0 }}">
+                    {{ gap.category }}: {{ gap.description }}
+                </label>
+                <textarea 
+                    name="gap_{{ loop.index0 }}" 
+                    id="gap_{{ loop.index0 }}"
+                    rows="3"
+                    placeholder="Describe your experience with this skill or area. For example: 'I've used this in 2 projects...' or 'No experience but willing to learn...' or 'I have 3 years of professional experience...'"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
+                    data-testid="textarea-gap-{{ loop.index0 }}"></textarea>
             </div>
             {% endfor %}
             
@@ -191,12 +188,10 @@ document.getElementById('gapForm')?.addEventListener('submit', async function(e)
     
     for (let i = 0; i < {{ match.gaps|length }}; i++) {
         const value = formData.get('gap_' + i);
-        if (value) {
-            gapResponses.push({
-                gapIndex: i,
-                proficiencyLevel: value
-            });
-        }
+        gapResponses.push({
+            gapIndex: i,
+            userResponse: value || 'No response provided'
+        });
     }
     
     try {

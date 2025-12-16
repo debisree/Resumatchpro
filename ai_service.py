@@ -494,14 +494,20 @@ def generate_final_verdict(
     gap_details = []
     for index, gap in enumerate(gaps):
         response = next((r for r in gap_responses if r.get("gapIndex") == index), None)
-        proficiency = response.get("proficiencyLevel", "not provided") if response else "not provided"
-        gap_details.append(f"{gap['category']} - {gap['description']} (Severity: {gap['severity']}, Proficiency: {proficiency})")
+        user_response = response.get("userResponse", "No response provided") if response else "No response provided"
+        if not user_response or user_response.strip() == "":
+            user_response = "No response provided"
+        gap_details.append(f"""
+GAP {index + 1}: {gap['category']} - {gap['description']}
+Severity: {gap['severity']}
+User's Response: "{user_response}"
+""")
     
-    prompt = f"""You are an expert career coach. Based on the analysis and user's proficiency responses, provide a final recommendation.
+    prompt = f"""You are an expert career coach. Based on the analysis and the user's FREE-TEXT responses about their experience with each gap, provide a final recommendation.
 
 ALIGNMENT SCORE: {alignment_score}%
 
-GAPS AND PROFICIENCY:
+IDENTIFIED GAPS AND USER'S RESPONSES:
 {chr(10).join(gap_details)}
 
 RESUME (excerpt):
@@ -510,9 +516,15 @@ RESUME (excerpt):
 JOB DESCRIPTION (excerpt):
 {job_description[:2000]}
 
+INSTRUCTIONS:
+1. Carefully interpret each user response to understand their actual experience level with each gap area
+2. Consider semantic meaning - phrases like "I've done this in 3 projects" indicates experience, while "never used but want to learn" indicates no experience but willingness
+3. Factor in both the alignment score AND the user's claimed experience when making your recommendation
+4. Be encouraging while being realistic
+
 Provide:
-1. A comprehensive final verdict (2-3 paragraphs) - be encouraging!
-2. A boolean recommendation on whether they should apply (true if score >= 50% or has proficiency in gaps)
+1. A comprehensive final verdict (2-3 paragraphs) that references specific things the user mentioned in their responses
+2. A boolean recommendation on whether they should apply based on overall fit AND their claimed experience
 
 Return ONLY valid JSON:
 {{"verdict": "...", "shouldApply": true}}"""
@@ -537,15 +549,18 @@ def generate_tailored_resume(
     gaps: List[Dict[str, str]],
     gap_responses: List[Dict[str, Any]]
 ) -> Dict[str, str]:
-    skills_to_add = []
+    user_experience_details = []
     for response in gap_responses:
-        if response.get("proficiencyLevel") in ["basic", "moderate", "advanced"]:
-            gap_idx = response.get("gapIndex", 0)
-            if gap_idx < len(gaps):
-                gap = gaps[gap_idx]
-                skills_to_add.append(f"- {gap['category']}: {response['proficiencyLevel']} proficiency")
+        gap_idx = response.get("gapIndex", 0)
+        user_response = response.get("userResponse", "")
+        if gap_idx < len(gaps) and user_response and user_response.strip():
+            gap = gaps[gap_idx]
+            user_experience_details.append(f"""
+Skill/Gap: {gap['category']}
+User's Experience: "{user_response}"
+""")
     
-    skills_text = chr(10).join(skills_to_add) if skills_to_add else "None confirmed"
+    skills_text = chr(10).join(user_experience_details) if user_experience_details else "No additional experience provided"
     
     prompt = f"""You are an expert resume writer. Create a tailored, ATS-optimized resume.
 
@@ -558,7 +573,7 @@ TARGET JOB:
 STRENGTHS TO HIGHLIGHT:
 {chr(10).join(f'- {s}' for s in strengths)}
 
-SKILLS USER CONFIRMED:
+USER'S ADDITIONAL EXPERIENCE (interpret from their free-text responses):
 {skills_text}
 
 RULES:
@@ -566,7 +581,8 @@ RULES:
 - NEVER invent metrics - only use existing numbers from original resume
 - Preserve ALL sections from original (Volunteering, Awards, Certifications, Memberships, etc.)
 - Keep ALL contact links exactly as they appear
-- Add confirmed skills to Skills section
+- Interpret user's experience descriptions and add relevant skills they mentioned to the Skills section
+- If user described specific experience (e.g., "used in 2 projects"), incorporate that context where appropriate
 - Use LaTeX (not L ATEX) when referencing that tool
 
 RETURN ONLY THIS JSON (no markdown, no extra text):
